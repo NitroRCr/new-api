@@ -1,7 +1,6 @@
 package ionet
 
 import (
-	"errors"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -12,30 +11,30 @@ import (
 // DeployContainer deploys a new container with the specified configuration
 func (c *Client) DeployContainer(req *DeploymentRequest) (*DeploymentResponse, error) {
 	if req == nil {
-		return nil, errors.New("deployment request cannot be nil")
+		return nil, fmt.Errorf("deployment request cannot be nil")
 	}
 
 	// Validate required fields
 	if req.ResourcePrivateName == "" {
-		return nil, errors.New("resource_private_name is required")
+		return nil, fmt.Errorf("resource_private_name is required")
 	}
 	if len(req.LocationIDs) == 0 {
-		return nil, errors.New("location_ids is required")
+		return nil, fmt.Errorf("location_ids is required")
 	}
 	if req.HardwareID <= 0 {
-		return nil, errors.New("hardware_id is required")
+		return nil, fmt.Errorf("hardware_id is required")
 	}
 	if req.RegistryConfig.ImageURL == "" {
-		return nil, errors.New("registry_config.image_url is required")
+		return nil, fmt.Errorf("registry_config.image_url is required")
 	}
 	if req.GPUsPerContainer < 1 {
-		return nil, errors.New("gpus_per_container must be at least 1")
+		return nil, fmt.Errorf("gpus_per_container must be at least 1")
 	}
 	if req.DurationHours < 1 {
-		return nil, errors.New("duration_hours must be at least 1")
+		return nil, fmt.Errorf("duration_hours must be at least 1")
 	}
 	if req.ContainerConfig.ReplicaCount < 1 {
-		return nil, errors.New("container_config.replica_count must be at least 1")
+		return nil, fmt.Errorf("container_config.replica_count must be at least 1")
 	}
 
 	resp, err := c.makeRequest("POST", "/deploy", req)
@@ -90,7 +89,7 @@ func (c *Client) ListDeployments(opts *ListDeploymentsOptions) (*DeploymentList,
 // GetDeployment retrieves detailed information about a specific deployment
 func (c *Client) GetDeployment(deploymentID string) (*DeploymentDetail, error) {
 	if deploymentID == "" {
-		return nil, errors.New("deployment ID cannot be empty")
+		return nil, fmt.Errorf("deployment ID cannot be empty")
 	}
 
 	endpoint := fmt.Sprintf("/deployment/%s", deploymentID)
@@ -111,10 +110,10 @@ func (c *Client) GetDeployment(deploymentID string) (*DeploymentDetail, error) {
 // UpdateDeployment updates the configuration of an existing deployment
 func (c *Client) UpdateDeployment(deploymentID string, req *UpdateDeploymentRequest) (*UpdateDeploymentResponse, error) {
 	if deploymentID == "" {
-		return nil, errors.New("deployment ID cannot be empty")
+		return nil, fmt.Errorf("deployment ID cannot be empty")
 	}
 	if req == nil {
-		return nil, errors.New("update request cannot be nil")
+		return nil, fmt.Errorf("update request cannot be nil")
 	}
 
 	endpoint := fmt.Sprintf("/deployment/%s", deploymentID)
@@ -137,13 +136,13 @@ func (c *Client) UpdateDeployment(deploymentID string, req *UpdateDeploymentRequ
 // ExtendDeployment extends the duration of an existing deployment
 func (c *Client) ExtendDeployment(deploymentID string, req *ExtendDurationRequest) (*DeploymentDetail, error) {
 	if deploymentID == "" {
-		return nil, errors.New("deployment ID cannot be empty")
+		return nil, fmt.Errorf("deployment ID cannot be empty")
 	}
 	if req == nil {
-		return nil, errors.New("extend request cannot be nil")
+		return nil, fmt.Errorf("extend request cannot be nil")
 	}
 	if req.DurationHours < 1 {
-		return nil, errors.New("duration_hours must be at least 1")
+		return nil, fmt.Errorf("duration_hours must be at least 1")
 	}
 
 	endpoint := fmt.Sprintf("/deployment/%s/extend", deploymentID)
@@ -164,7 +163,7 @@ func (c *Client) ExtendDeployment(deploymentID string, req *ExtendDurationReques
 // DeleteDeployment deletes an active deployment
 func (c *Client) DeleteDeployment(deploymentID string) (*UpdateDeploymentResponse, error) {
 	if deploymentID == "" {
-		return nil, errors.New("deployment ID cannot be empty")
+		return nil, fmt.Errorf("deployment ID cannot be empty")
 	}
 
 	endpoint := fmt.Sprintf("/deployment/%s", deploymentID)
@@ -187,18 +186,18 @@ func (c *Client) DeleteDeployment(deploymentID string) (*UpdateDeploymentRespons
 // GetPriceEstimation calculates the estimated cost for a deployment
 func (c *Client) GetPriceEstimation(req *PriceEstimationRequest) (*PriceEstimationResponse, error) {
 	if req == nil {
-		return nil, errors.New("price estimation request cannot be nil")
+		return nil, fmt.Errorf("price estimation request cannot be nil")
 	}
 
 	// Validate required fields
 	if len(req.LocationIDs) == 0 {
-		return nil, errors.New("location_ids is required")
+		return nil, fmt.Errorf("location_ids is required")
 	}
 	if req.HardwareID == 0 {
-		return nil, errors.New("hardware_id is required")
+		return nil, fmt.Errorf("hardware_id is required")
 	}
 	if req.ReplicaCount < 1 {
-		return nil, errors.New("replica_count must be at least 1")
+		return nil, fmt.Errorf("replica_count must be at least 1")
 	}
 
 	currency := strings.TrimSpace(req.Currency)
@@ -219,7 +218,7 @@ func (c *Client) GetPriceEstimation(req *PriceEstimationRequest) (*PriceEstimati
 		durationQty = req.DurationHours
 	}
 	if durationQty < 1 {
-		return nil, errors.New("duration_qty must be at least 1")
+		return nil, fmt.Errorf("duration_qty must be at least 1")
 	}
 
 	hardwareQty := req.HardwareQty
@@ -227,7 +226,7 @@ func (c *Client) GetPriceEstimation(req *PriceEstimationRequest) (*PriceEstimati
 		hardwareQty = req.GPUsPerContainer
 	}
 	if hardwareQty < 1 {
-		return nil, errors.New("hardware_qty must be at least 1")
+		return nil, fmt.Errorf("hardware_qty must be at least 1")
 	}
 
 	durationHoursForRate := req.DurationHours
@@ -327,7 +326,7 @@ func (c *Client) GetPriceEstimation(req *PriceEstimationRequest) (*PriceEstimati
 // CheckClusterNameAvailability checks if a cluster name is available
 func (c *Client) CheckClusterNameAvailability(clusterName string) (bool, error) {
 	if clusterName == "" {
-		return false, errors.New("cluster name cannot be empty")
+		return false, fmt.Errorf("cluster name cannot be empty")
 	}
 
 	params := map[string]interface{}{
@@ -352,13 +351,13 @@ func (c *Client) CheckClusterNameAvailability(clusterName string) (bool, error) 
 // UpdateClusterName updates the name of an existing cluster/deployment
 func (c *Client) UpdateClusterName(clusterID string, req *UpdateClusterNameRequest) (*UpdateClusterNameResponse, error) {
 	if clusterID == "" {
-		return nil, errors.New("cluster ID cannot be empty")
+		return nil, fmt.Errorf("cluster ID cannot be empty")
 	}
 	if req == nil {
-		return nil, errors.New("update cluster name request cannot be nil")
+		return nil, fmt.Errorf("update cluster name request cannot be nil")
 	}
 	if req.Name == "" {
-		return nil, errors.New("cluster name cannot be empty")
+		return nil, fmt.Errorf("cluster name cannot be empty")
 	}
 
 	endpoint := fmt.Sprintf("/clusters/%s/update-name", clusterID)

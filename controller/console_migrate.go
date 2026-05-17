@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
 
 	"github.com/gin-gonic/gin"
@@ -18,8 +17,8 @@ func MigrateConsoleSetting(c *gin.Context) {
 	// 读取全部 option
 	opts, err := model.AllOption()
 	if err != nil {
-		common.SysError(i18n.Translate("ctrl.failed_to_get_all_options") + err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": i18n.T(c, "common.retry_later")})
+		common.SysError("failed to get all options: " + err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "获取配置失败，请稍后重试"})
 		return
 	}
 	// 建立 map
@@ -102,6 +101,6 @@ func MigrateConsoleSetting(c *gin.Context) {
 
 	// 重新加载 OptionMap
 	model.InitOptionMap()
-	common.SysLog(i18n.Translate("ctrl.console_setting_migrated"))
+	common.SysLog("console setting migrated")
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "migrated"})
 }

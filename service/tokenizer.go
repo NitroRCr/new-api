@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"sync"
 
 	"github.com/QuantumNous/new-api/common"
@@ -19,9 +18,9 @@ var tokenEncoderMap = make(map[string]tokenizer.Codec)
 var tokenEncoderMutex sync.RWMutex
 
 func InitTokenEncoders() {
-	common.SysLog(i18n.Translate("svc.initializing_token_encoders"))
+	common.SysLog("initializing token encoders")
 	defaultTokenEncoder = codec.NewCl100kBase()
-	common.SysLog(i18n.Translate("svc.token_encoders_initialized"))
+	common.SysLog("token encoders initialized")
 }
 
 func getTokenEncoder(model string) tokenizer.Codec {

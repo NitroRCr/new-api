@@ -1,7 +1,6 @@
 package kling
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"bytes"
 	"fmt"
 	"io"
@@ -148,7 +147,7 @@ func (a *TaskAdaptor) BuildRequestURL(info *relaycommon.RelayInfo) (string, erro
 func (a *TaskAdaptor) BuildRequestHeader(c *gin.Context, req *http.Request, info *relaycommon.RelayInfo) error {
 	token, err := a.createJWTToken()
 	if err != nil {
-		return fmt.Errorf(i18n.Translate("relay.failed_to_create_jwt_token"), err)
+		return fmt.Errorf("failed to create JWT token: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -162,7 +161,7 @@ func (a *TaskAdaptor) BuildRequestHeader(c *gin.Context, req *http.Request, info
 func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayInfo) (io.Reader, error) {
 	v, exists := c.Get("task_request")
 	if !exists {
-		return nil, errors.New(i18n.Translate("relay.request_not_found_in_context"))
+		return nil, fmt.Errorf("request not found in context")
 	}
 	req := v.(relaycommon.TaskSubmitReq)
 
@@ -219,11 +218,11 @@ func (a *TaskAdaptor) DoResponse(c *gin.Context, resp *http.Response, info *rela
 func (a *TaskAdaptor) FetchTask(baseUrl, key string, body map[string]any, proxy string) (*http.Response, error) {
 	taskID, ok := body["task_id"].(string)
 	if !ok {
-		return nil, errors.New(i18n.Translate("relay.invalid_task_id"))
+		return nil, fmt.Errorf("invalid task_id")
 	}
 	action, ok := body["action"].(string)
 	if !ok {
-		return nil, errors.New(i18n.Translate("relay.invalid_action"))
+		return nil, fmt.Errorf("invalid action")
 	}
 	path := lo.Ternary(action == constant.TaskActionGenerate, "/v1/videos/image2video", "/v1/videos/text2video")
 	url := fmt.Sprintf("%s%s/%s", baseUrl, path, taskID)
@@ -247,7 +246,7 @@ func (a *TaskAdaptor) FetchTask(baseUrl, key string, body map[string]any, proxy 
 
 	client, err := service.GetHttpClientWithProxy(proxy)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Translate("relay.new_proxy_http_client_failed"), err)
+		return nil, fmt.Errorf("new proxy http client failed: %w", err)
 	}
 	return client.Do(req)
 }
@@ -317,7 +316,7 @@ func (a *TaskAdaptor) createJWTTokenWithKey(apiKey string) (string, error) {
 	}
 	keyParts := strings.Split(apiKey, "|")
 	if len(keyParts) != 2 {
-		return "", errors.New(i18n.Translate("relay.invalid_api_key_required_format_is_accesskey_secretkey"))
+		return "", errors.New("invalid api_key, required format is accessKey|secretKey")
 	}
 	accessKey := strings.TrimSpace(keyParts[0])
 	if len(keyParts) == 1 {
@@ -368,7 +367,7 @@ func (a *TaskAdaptor) ParseTaskResult(respBody []byte) (*relaycommon.TaskInfo, e
 	case "failed":
 		taskInfo.Status = model.TaskStatusFailure
 	default:
-		return nil, fmt.Errorf(i18n.Translate("relay.unknown_task_status"), status)
+		return nil, fmt.Errorf("unknown task status: %s", status)
 	}
 	return taskInfo, nil
 }

@@ -16,18 +16,11 @@ import (
 )
 
 const (
-	LangZhCN = "zh-CN"
-	LangZhTW = "zh-TW"
-	LangEn   = "en"
-	LangFr   = "fr"
-	LangJa   = "ja"
-	LangRu   = "ru"
-	LangVi   = "vi"
+	LangZhCN    = "zh-CN"
+	LangZhTW    = "zh-TW"
+	LangEn      = "en"
+	DefaultLang = LangEn // Fallback to English if language not supported
 )
-
-// DefaultLang is the runtime default language, overridden by DEFAULT_LANGUAGE env var in Init().
-// Defaults to zh-CN (the source language for YAML files) if no env var is set.
-var DefaultLang = LangZhCN
 
 //go:embed locales/*.yaml
 var localeFS embed.FS
@@ -43,25 +36,11 @@ var (
 func Init() error {
 	var initErr error
 	initOnce.Do(func() {
-		// Override default language from env var
-		if envLang := common.GetEnvOrDefaultString("DEFAULT_LANGUAGE", ""); envLang != "" {
-			normalized := normalizeLang(envLang)
-			for _, supported := range SupportedLanguages() {
-				if normalized == supported {
-					DefaultLang = normalized
-					break
-				}
-			}
-		}
-
 		bundle = i18n.NewBundle(language.Chinese)
 		bundle.RegisterUnmarshalFunc("yaml", yaml.Unmarshal)
 
 		// Load embedded translation files
-		files := []string{
-			"locales/zh-CN.yaml", "locales/zh-TW.yaml", "locales/en.yaml",
-			"locales/fr.yaml", "locales/ja.yaml", "locales/ru.yaml", "locales/vi.yaml",
-		}
+		files := []string{"locales/zh-CN.yaml", "locales/zh-TW.yaml", "locales/en.yaml"}
 		for _, file := range files {
 			_, err := bundle.LoadMessageFileFS(localeFS, file)
 			if err != nil {
@@ -71,13 +50,12 @@ func Init() error {
 		}
 
 		// Pre-create localizers for supported languages
-		for _, lang := range SupportedLanguages() {
-			localizers[lang] = i18n.NewLocalizer(bundle, lang)
-		}
+		localizers[LangZhCN] = i18n.NewLocalizer(bundle, LangZhCN)
+		localizers[LangZhTW] = i18n.NewLocalizer(bundle, LangZhTW)
+		localizers[LangEn] = i18n.NewLocalizer(bundle, LangEn)
 
-		// Set translation functions in common package (breaks circular imports)
+		// Set the TranslateMessage function in common package
 		common.TranslateMessage = T
-		common.Translate = Translate
 	})
 	return initErr
 }
@@ -108,26 +86,14 @@ func GetLocalizer(lang string) *i18n.Localizer {
 	return loc
 }
 
-// T translates a message key using the language from gin context.
+// T translates a message key using the language from gin context
 func T(c *gin.Context, key string, args ...map[string]any) string {
-	return translate(GetLangFromContext(c), key, args...)
+	lang := GetLangFromContext(c)
+	return Translate(lang, key, args...)
 }
 
-// Translate translates a message key using the default language.
-func Translate(key string, args ...map[string]any) string {
-	return translate(DefaultLang, key, args...)
-}
-
-// TranslateLang translates a message key using the specified language.
-// Falls back to the default language when lang is empty or unsupported.
-func TranslateLang(lang, key string, args ...map[string]any) string {
-	if lang == "" {
-		lang = DefaultLang
-	}
-	return translate(lang, key, args...)
-}
-
-func translate(lang, key string, args ...map[string]any) string {
+// Translate translates a message key for the specified language
+func Translate(lang, key string, args ...map[string]any) string {
 	loc := GetLocalizer(lang)
 
 	config := &i18n.LocalizeConfig{
@@ -237,20 +203,12 @@ func normalizeLang(lang string) string {
 
 	// Handle common variations
 	switch {
-	case strings.HasPrefix(lang, "zh-tw"), strings.HasPrefix(lang, "zh-hant"):
+	case strings.HasPrefix(lang, "zh-tw"):
 		return LangZhTW
 	case strings.HasPrefix(lang, "zh"):
 		return LangZhCN
 	case strings.HasPrefix(lang, "en"):
 		return LangEn
-	case strings.HasPrefix(lang, "fr"):
-		return LangFr
-	case strings.HasPrefix(lang, "ja"):
-		return LangJa
-	case strings.HasPrefix(lang, "ru"):
-		return LangRu
-	case strings.HasPrefix(lang, "vi"):
-		return LangVi
 	default:
 		return DefaultLang
 	}
@@ -258,7 +216,7 @@ func normalizeLang(lang string) string {
 
 // SupportedLanguages returns a list of supported language codes
 func SupportedLanguages() []string {
-	return []string{LangZhCN, LangZhTW, LangEn, LangFr, LangJa, LangRu, LangVi}
+	return []string{LangZhCN, LangZhTW, LangEn}
 }
 
 // IsSupported checks if a language code is supported

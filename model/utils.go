@@ -1,7 +1,6 @@
 package model
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"errors"
 	"sync"
 	"time"
@@ -67,7 +66,7 @@ func batchUpdate() {
 		return
 	}
 
-	common.SysLog(i18n.Translate("model.batch_update_started"))
+	common.SysLog("batch update started")
 	for i := 0; i < BatchUpdateTypeCount; i++ {
 		batchUpdateLocks[i].Lock()
 		store := batchUpdateStores[i]
@@ -79,12 +78,12 @@ func batchUpdate() {
 			case BatchUpdateTypeUserQuota:
 				err := increaseUserQuota(key, value)
 				if err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_batch_update_user_quota") + err.Error())
+					common.SysLog("failed to batch update user quota: " + err.Error())
 				}
 			case BatchUpdateTypeTokenQuota:
 				err := increaseTokenQuota(key, value)
 				if err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_batch_update_token_quota") + err.Error())
+					common.SysLog("failed to batch update token quota: " + err.Error())
 				}
 			case BatchUpdateTypeUsedQuota:
 				updateUserUsedQuota(key, value)
@@ -95,7 +94,7 @@ func batchUpdate() {
 			}
 		}
 	}
-	common.SysLog(i18n.Translate("model.batch_update_finished"))
+	common.SysLog("batch update finished")
 }
 
 func RecordExist(err error) (bool, error) {

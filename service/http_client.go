@@ -1,8 +1,6 @@
 package service
 
 import (
-	"errors"
-	"github.com/QuantumNous/new-api/i18n"
 	"context"
 	"fmt"
 	"net"
@@ -27,10 +25,10 @@ func checkRedirect(req *http.Request, via []*http.Request) error {
 	fetchSetting := system_setting.GetFetchSetting()
 	urlStr := req.URL.String()
 	if err := common.ValidateURLWithFetchSetting(urlStr, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
-		return fmt.Errorf(i18n.Translate("svc.redirect_to_blocked"), urlStr, err)
+		return fmt.Errorf("redirect to %s blocked: %v", urlStr, err)
 	}
 	if len(via) >= 10 {
-		return errors.New(i18n.Translate("svc.stopped_after_10_redirects"))
+		return fmt.Errorf("stopped after 10 redirects")
 	}
 	return nil
 }
@@ -166,6 +164,6 @@ func NewProxyHttpClient(proxyURL string) (*http.Client, error) {
 		return client, nil
 
 	default:
-		return nil, fmt.Errorf(i18n.Translate("svc.unsupported_proxy_scheme_must_be_http_https_socks5"), parsedURL.Scheme)
+		return nil, fmt.Errorf("unsupported proxy scheme: %s, must be http, https, socks5 or socks5h", parsedURL.Scheme)
 	}
 }

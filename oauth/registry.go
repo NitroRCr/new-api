@@ -1,7 +1,6 @@
 package oauth
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"fmt"
 	"sync"
 
@@ -100,7 +99,7 @@ func LoadCustomProviders() error {
 	// Load all custom providers from database
 	customProviders, err := model.GetAllCustomOAuthProviders()
 	if err != nil {
-		common.SysError(i18n.Translate("oauth.failed_to_load_custom_oauth_providers") + err.Error())
+		common.SysError("Failed to load custom OAuth providers: " + err.Error())
 		return err
 	}
 
@@ -108,10 +107,10 @@ func LoadCustomProviders() error {
 	for _, config := range customProviders {
 		provider := NewGenericOAuthProvider(config)
 		RegisterCustom(config.Slug, provider)
-		common.SysLog(i18n.Translate("oauth.loaded_custom_oauth_provider") + config.Name + " (" + config.Slug + ")")
+		common.SysLog("Loaded custom OAuth provider: " + config.Name + " (" + config.Slug + ")")
 	}
 
-	common.SysLog(fmt.Sprintf(i18n.Translate("oauth.loaded_custom_oauth_providers"), len(customProviders)))
+	common.SysLog(fmt.Sprintf("Loaded %d custom OAuth providers", len(customProviders)))
 	return nil
 }
 

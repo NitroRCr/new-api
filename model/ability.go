@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 
 	"github.com/samber/lo"
 	"gorm.io/gorm"
@@ -75,7 +74,7 @@ func getPriority(group string, model string, retry int) (int, error) {
 
 	if len(priorities) == 0 {
 		// 如果没有查询到优先级，则返回错误
-		return 0, errors.New(i18n.Translate("ability.db_consistency_broken"))
+		return 0, errors.New("数据库一致性被破坏")
 	}
 
 	// 确定要使用的优先级
@@ -288,7 +287,7 @@ var fixLock = sync.Mutex{}
 func FixAbility() (int, int, error) {
 	lock := fixLock.TryLock()
 	if !lock {
-		return 0, 0, errors.New(i18n.Translate("ability.fix_already_running"))
+		return 0, 0, errors.New("已经有一个修复任务在运行中，请稍后再试")
 	}
 	defer fixLock.Unlock()
 
@@ -296,13 +295,13 @@ func FixAbility() (int, int, error) {
 	if common.UsingSQLite {
 		err := DB.Exec("DELETE FROM abilities").Error
 		if err != nil {
-			common.SysLog(fmt.Sprintf(i18n.Translate("model.delete_abilities_failed"), err.Error()))
+			common.SysLog(fmt.Sprintf("Delete abilities failed: %s", err.Error()))
 			return 0, 0, err
 		}
 	} else {
 		err := DB.Exec("TRUNCATE TABLE abilities").Error
 		if err != nil {
-			common.SysLog(fmt.Sprintf(i18n.Translate("model.truncate_abilities_failed"), err.Error()))
+			common.SysLog(fmt.Sprintf("Truncate abilities failed: %s", err.Error()))
 			return 0, 0, err
 		}
 	}
@@ -322,7 +321,7 @@ func FixAbility() (int, int, error) {
 		// Delete all abilities of this channel
 		err = DB.Where("channel_id IN ?", ids).Delete(&Ability{}).Error
 		if err != nil {
-			common.SysLog(fmt.Sprintf(i18n.Translate("model.delete_abilities_failed"), err.Error()))
+			common.SysLog(fmt.Sprintf("Delete abilities failed: %s", err.Error()))
 			failCount += len(chunk)
 			continue
 		}
@@ -330,7 +329,7 @@ func FixAbility() (int, int, error) {
 		for _, channel := range chunk {
 			err = channel.AddAbilities(nil)
 			if err != nil {
-				common.SysLog(fmt.Sprintf(i18n.Translate("model.add_abilities_for_channel_failed"), channel.Id, err.Error()))
+				common.SysLog(fmt.Sprintf("Add abilities for channel %d failed: %s", channel.Id, err.Error()))
 				failCount++
 			} else {
 				successCount++

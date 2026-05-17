@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -10,7 +9,7 @@ import (
 func parseAudio(audioBase64 string, format string) (duration float64, err error) {
 	audioData, err := base64.StdEncoding.DecodeString(audioBase64)
 	if err != nil {
-		return 0, fmt.Errorf(i18n.Translate("svc.base64_decode_error"), err)
+		return 0, fmt.Errorf("base64 decode error: %v", err)
 	}
 
 	var samplesCount int
@@ -42,7 +41,7 @@ func DecodeBase64AudioData(audioBase64 string) (string, error) {
 	// 解码 Base64 数据
 	_, err := base64.StdEncoding.DecodeString(audioBase64)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Translate("svc.base64_decode_error"), err)
+		return "", fmt.Errorf("base64 decode error: %v", err)
 	}
 
 	return audioBase64, nil

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"bytes"
 	"fmt"
 	"image"
@@ -24,14 +23,14 @@ import (
 func GetFileTypeFromUrl(c *gin.Context, url string, reason ...string) (string, error) {
 	response, err := DoDownloadRequest(url, []string{"get_mime_type", strings.Join(reason, ", ")}...)
 	if err != nil {
-		common.SysLog(fmt.Sprintf(i18n.Translate("svc.fail_to_get_file_type_from_url"), url, err.Error()))
+		common.SysLog(fmt.Sprintf("fail to get file type from url: %s, error: %s", url, err.Error()))
 		return "", err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		logger.LogError(c, fmt.Sprintf(i18n.Translate("svc.failed_to_download_file_from_status_code"), url, response.StatusCode))
-		return "", fmt.Errorf(i18n.Translate("svc.failed_to_download_file_status_code"), response.StatusCode)
+		logger.LogError(c, fmt.Sprintf("failed to download file from %s, status code: %d", url, response.StatusCode))
+		return "", fmt.Errorf("failed to download file, status code: %d", response.StatusCode)
 	}
 
 	if headerType := strings.TrimSpace(response.Header.Get("Content-Type")); headerType != "" {
@@ -86,7 +85,7 @@ func GetFileTypeFromUrl(c *gin.Context, url string, reason ...string) (string, e
 	var readData []byte
 	limits := []int{512, 8 * 1024, 24 * 1024, 64 * 1024}
 	for _, limit := range limits {
-		logger.LogDebug(c, fmt.Sprintf(i18n.Translate("svc.trying_to_read_bytes_to_determine_file_type"), limit))
+		logger.LogDebug(c, fmt.Sprintf("Trying to read %d bytes to determine file type", limit))
 		if len(readData) < limit {
 			need := limit - len(readData)
 			tmp := make([]byte, need)

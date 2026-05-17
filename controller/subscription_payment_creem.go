@@ -37,7 +37,7 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 	c.Request.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
 	if err := c.ShouldBindJSON(&req); err != nil || req.PlanId <= 0 {
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "common.invalid_params")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "参数错误"})
 		return
 	}
 
@@ -47,15 +47,15 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 		return
 	}
 	if !plan.Enabled {
-		common.ApiErrorMsg(c, common.TranslateMessage(c, "subscription.not_enabled"))
+		common.ApiErrorMsg(c, "套餐未启用")
 		return
 	}
 	if plan.CreemProductId == "" {
-		common.ApiErrorMsg(c, common.TranslateMessage(c, "payment.product_config_error"))
+		common.ApiErrorMsg(c, "该套餐未配置 CreemProductId")
 		return
 	}
 	if setting.CreemWebhookSecret == "" && !setting.CreemTestMode {
-		common.ApiErrorMsg(c, common.TranslateMessage(c, "payment.webhook_not_configured"))
+		common.ApiErrorMsg(c, "Creem Webhook 未配置")
 		return
 	}
 
@@ -66,7 +66,7 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 		return
 	}
 	if user == nil {
-		common.ApiErrorMsg(c, common.TranslateMessage(c, "user.not_exists"))
+		common.ApiErrorMsg(c, "用户不存在")
 		return
 	}
 
@@ -77,7 +77,7 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 			return
 		}
 		if count >= int64(plan.MaxPurchasePerUser) {
-			common.ApiErrorMsg(c, common.TranslateMessage(c, "subscription.purchase_max"))
+			common.ApiErrorMsg(c, "已达到该套餐购买上限")
 			return
 		}
 	}
@@ -97,7 +97,7 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 		Status:          common.TopUpStatusPending,
 	}
 	if err := order.Insert(); err != nil {
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "payment.create_failed")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "创建订单失败"})
 		return
 	}
 
@@ -122,7 +122,7 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 	checkoutUrl, err := genCreemLink(c.Request.Context(), referenceId, product, user.Email, user.Username)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Creem 订阅支付链接创建失败 trade_no=%s product_id=%s error=%q", referenceId, product.ProductId, err.Error()))
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "payment.start_failed")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})
 		return
 	}
 

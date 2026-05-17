@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +20,7 @@ func SetRouter(router *gin.Engine, assets ThemeAssets) {
 	frontendBaseUrl := os.Getenv("FRONTEND_BASE_URL")
 	if common.IsMasterNode && frontendBaseUrl != "" {
 		frontendBaseUrl = ""
-		common.SysLog(i18n.Translate("router.frontend_base_url_is_ignored_on_master"))
+		common.SysLog("FRONTEND_BASE_URL is ignored on master node")
 	}
 	if frontendBaseUrl == "" {
 		SetWebRouter(router, assets)

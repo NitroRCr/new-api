@@ -1,7 +1,6 @@
 package hailuo
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"bytes"
 	"fmt"
 	"io"
@@ -55,11 +54,11 @@ func (a *TaskAdaptor) BuildRequestHeader(c *gin.Context, req *http.Request, info
 func (a *TaskAdaptor) BuildRequestBody(c *gin.Context, info *relaycommon.RelayInfo) (io.Reader, error) {
 	v, exists := c.Get("task_request")
 	if !exists {
-		return nil, errors.New(i18n.Translate("relay.request_not_found_in_context"))
+		return nil, fmt.Errorf("request not found in context")
 	}
 	req, ok := v.(relaycommon.TaskSubmitReq)
 	if !ok {
-		return nil, errors.New(i18n.Translate("relay.invalid_request_type_in_context"))
+		return nil, fmt.Errorf("invalid request type in context")
 	}
 
 	body, err := a.convertToRequestPayload(&req, info)
@@ -95,7 +94,7 @@ func (a *TaskAdaptor) DoResponse(c *gin.Context, resp *http.Response, info *rela
 
 	if hResp.BaseResp.StatusCode != StatusSuccess {
 		taskErr = service.TaskErrorWrapper(
-			fmt.Errorf(i18n.Translate("relay.hailuo_api_error"), hResp.BaseResp.StatusMsg),
+			fmt.Errorf("hailuo api error: %s", hResp.BaseResp.StatusMsg),
 			strconv.Itoa(hResp.BaseResp.StatusCode),
 			http.StatusBadRequest,
 		)
@@ -115,10 +114,10 @@ func (a *TaskAdaptor) DoResponse(c *gin.Context, resp *http.Response, info *rela
 func (a *TaskAdaptor) FetchTask(baseUrl, key string, body map[string]any, proxy string) (*http.Response, error) {
 	taskID, ok := body["task_id"].(string)
 	if !ok {
-		return nil, errors.New(i18n.Translate("relay.invalid_task_id"))
+		return nil, fmt.Errorf("invalid task_id")
 	}
 
-	uri := fmt.Sprintf(i18n.Translate("relay.task_id"), baseUrl, QueryTaskEndpoint, taskID)
+	uri := fmt.Sprintf("%s%s?task_id=%s", baseUrl, QueryTaskEndpoint, taskID)
 
 	req, err := http.NewRequest(http.MethodGet, uri, nil)
 	if err != nil {
@@ -130,7 +129,7 @@ func (a *TaskAdaptor) FetchTask(baseUrl, key string, body map[string]any, proxy 
 
 	client, err := service.GetHttpClientWithProxy(proxy)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Translate("relay.new_proxy_http_client_failed"), err)
+		return nil, fmt.Errorf("new proxy http client failed: %w", err)
 	}
 	return client.Do(req)
 }

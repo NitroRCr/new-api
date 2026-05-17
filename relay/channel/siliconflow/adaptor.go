@@ -1,7 +1,6 @@
 package siliconflow
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"errors"
 	"fmt"
 	"io"
@@ -24,7 +23,7 @@ type Adaptor struct {
 
 func (a *Adaptor) ConvertGeminiRequest(*gin.Context, *relaycommon.RelayInfo, *dto.GeminiChatRequest) (any, error) {
 	//TODO implement me
-	return nil, errors.New(i18n.Translate("common.not_implemented"))
+	return nil, errors.New("not implemented")
 }
 
 func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, req *dto.ClaudeRequest) (any, error) {
@@ -95,7 +94,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 
 func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.OpenAIResponsesRequest) (any, error) {
 	// TODO implement me
-	return nil, errors.New(i18n.Translate("common.not_implemented"))
+	return nil, errors.New("not implemented")
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {

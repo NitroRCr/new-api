@@ -3,7 +3,6 @@ package service
 import (
 	"strings"
 
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 )
@@ -31,7 +30,7 @@ func GetUserUsableGroups(userGroup string) map[string]string {
 		}
 		// 如果userGroup不在UserUsableGroups中，返回UserUsableGroups + userGroup
 		if _, ok := groupsCopy[userGroup]; !ok {
-			groupsCopy[userGroup] = i18n.Translate("group.user_group")
+			groupsCopy[userGroup] = "用户分组"
 		}
 	}
 	return groupsCopy

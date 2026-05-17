@@ -1,7 +1,6 @@
 package model
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"fmt"
 	"sync"
 	"time"
@@ -25,7 +24,7 @@ type QuotaData struct {
 func UpdateQuotaData() {
 	for {
 		if common.DataExportEnabled {
-			common.SysLog(i18n.Translate("model.updating_dashboard_data"))
+			common.SysLog("正在更新数据看板数据...")
 			SaveQuotaDataCache()
 		}
 		time.Sleep(time.Duration(common.DataExportInterval) * time.Minute)
@@ -87,7 +86,7 @@ func SaveQuotaDataCache() {
 		}
 	}
 	CacheQuotaData = make(map[string]*QuotaData)
-	common.SysLog(fmt.Sprintf(i18n.Translate("model.dashboard_data_saved_successfully_records_saved"), size))
+	common.SysLog(fmt.Sprintf("保存数据看板数据成功，共保存%d条数据", size))
 }
 
 func increaseQuotaData(userId int, username string, modelName string, count int, quota int, createdAt int64, tokenUsed int) {
@@ -98,7 +97,7 @@ func increaseQuotaData(userId int, username string, modelName string, count int,
 		"token_used": gorm.Expr("token_used + ?", tokenUsed),
 	}).Error
 	if err != nil {
-		common.SysLog(fmt.Sprintf(i18n.Translate("model.increasequotadata_error"), err))
+		common.SysLog(fmt.Sprintf("increaseQuotaData error: %s", err))
 	}
 }
 

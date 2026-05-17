@@ -1,7 +1,6 @@
 package vertex
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
@@ -34,14 +33,14 @@ var Cache = asynccache.NewAsyncCache(asynccache.Options{
 	EnableExpire:    true,
 	ExpireDuration:  time.Minute * 30,
 	Fetcher: func(key string) (interface{}, error) {
-		return nil, errors.New(i18n.Translate("relay.not_found"))
+		return nil, errors.New("not found")
 	},
 })
 
 func getAccessToken(a *Adaptor, info *relaycommon.RelayInfo) (string, error) {
 	var cacheKey string
 	if info.ChannelIsMultiKey {
-		cacheKey = fmt.Sprintf(i18n.Translate("relay.access_token"), info.ChannelId, info.ChannelMultiKeyIndex)
+		cacheKey = fmt.Sprintf("access-token-%d-%d", info.ChannelId, info.ChannelMultiKeyIndex)
 	} else {
 		cacheKey = fmt.Sprintf("access-token-%d", info.ChannelId)
 	}
@@ -52,11 +51,11 @@ func getAccessToken(a *Adaptor, info *relaycommon.RelayInfo) (string, error) {
 
 	signedJWT, err := createSignedJWT(a.AccountCredentials.ClientEmail, a.AccountCredentials.PrivateKey)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Translate("relay.failed_to_create_signed_jwt"), err)
+		return "", fmt.Errorf("failed to create signed JWT: %w", err)
 	}
 	newToken, err := exchangeJwtForAccessToken(signedJWT, info)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Translate("relay.failed_to_exchange_jwt_for_access_token"), err)
+		return "", fmt.Errorf("failed to exchange JWT for access token: %w", err)
 	}
 	if err := Cache.SetDefault(cacheKey, newToken); err {
 		return newToken, nil
@@ -74,7 +73,7 @@ func createSignedJWT(email, privateKeyPEM string) (string, error) {
 
 	block, _ := pem.Decode([]byte("-----BEGIN PRIVATE KEY-----\n" + privateKeyPEM + "\n-----END PRIVATE KEY-----"))
 	if block == nil {
-		return "", errors.New(i18n.Translate("relay.failed_to_parse_pem_block_containing_the_private"))
+		return "", fmt.Errorf("failed to parse PEM block containing the private key")
 	}
 
 	privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -84,7 +83,7 @@ func createSignedJWT(email, privateKeyPEM string) (string, error) {
 
 	rsaPrivateKey, ok := privateKey.(*rsa.PrivateKey)
 	if !ok {
-		return "", errors.New(i18n.Translate("relay.not_an_rsa_private_key"))
+		return "", fmt.Errorf("not an RSA private key")
 	}
 
 	now := time.Now()
@@ -117,7 +116,7 @@ func exchangeJwtForAccessToken(signedJWT string, info *relaycommon.RelayInfo) (s
 	if info.ChannelSetting.Proxy != "" {
 		client, err = service.NewProxyHttpClient(info.ChannelSetting.Proxy)
 		if err != nil {
-			return "", fmt.Errorf(i18n.Translate("relay.new_proxy_http_client_failed"), err)
+			return "", fmt.Errorf("new proxy http client failed: %w", err)
 		}
 	} else {
 		client = service.GetHttpClient()
@@ -138,13 +137,13 @@ func exchangeJwtForAccessToken(signedJWT string, info *relaycommon.RelayInfo) (s
 		return accessToken, nil
 	}
 
-	return "", fmt.Errorf(i18n.Translate("relay.failed_to_get_access_token"), result)
+	return "", fmt.Errorf("failed to get access token: %v", result)
 }
 
 func AcquireAccessToken(creds Credentials, proxy string) (string, error) {
 	signedJWT, err := createSignedJWT(creds.ClientEmail, creds.PrivateKey)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Translate("relay.failed_to_create_signed_jwt"), err)
+		return "", fmt.Errorf("failed to create signed JWT: %w", err)
 	}
 	return exchangeJwtForAccessTokenWithProxy(signedJWT, proxy)
 }
@@ -160,7 +159,7 @@ func exchangeJwtForAccessTokenWithProxy(signedJWT string, proxy string) (string,
 	if proxy != "" {
 		client, err = service.NewProxyHttpClient(proxy)
 		if err != nil {
-			return "", fmt.Errorf(i18n.Translate("relay.new_proxy_http_client_failed"), err)
+			return "", fmt.Errorf("new proxy http client failed: %w", err)
 		}
 	} else {
 		client = service.GetHttpClient()
@@ -180,5 +179,5 @@ func exchangeJwtForAccessTokenWithProxy(signedJWT string, proxy string) (string,
 	if accessToken, ok := result["access_token"].(string); ok {
 		return accessToken, nil
 	}
-	return "", fmt.Errorf(i18n.Translate("relay.failed_to_get_access_token"), result)
+	return "", fmt.Errorf("failed to get access token: %v", result)
 }

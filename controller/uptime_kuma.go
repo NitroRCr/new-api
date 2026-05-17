@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"context"
 	"encoding/json"
 	"errors"
@@ -49,7 +48,7 @@ func getAndDecode(ctx context.Context, client *http.Client, url string, dest int
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New(i18n.Translate("ctrl.non_200_status"))
+		return errors.New("non-200 status")
 	}
 
 	return json.NewDecoder(resp.Body).Decode(dest)

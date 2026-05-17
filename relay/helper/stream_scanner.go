@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"bufio"
 	"context"
 	"fmt"
@@ -102,7 +101,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):
-			logger.LogError(c, i18n.Translate("relay.timeout_waiting_for_goroutines_to_exit"))
+			logger.LogError(c, "timeout waiting for goroutines to exit")
 		}
 
 		close(stopChan)
@@ -124,7 +123,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 			defer func() {
 				wg.Done()
 				if r := recover(); r != nil {
-					logger.LogError(c, fmt.Sprintf(i18n.Translate("relay.ping_goroutine_panic"), r))
+					logger.LogError(c, fmt.Sprintf("ping goroutine panic: %v", r))
 					info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonPanic, fmt.Errorf("ping panic: %v", r))
 					common.SafeSendBool(stopChan, true)
 				}
@@ -160,7 +159,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 							println("ping data sent")
 						}
 					case <-time.After(10 * time.Second):
-						logger.LogError(c, i18n.Translate("relay.ping_data_send_timeout"))
+						logger.LogError(c, "ping data send timeout")
 						info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonPingFail, fmt.Errorf("ping send timeout"))
 						return
 					case <-ctx.Done():
@@ -176,7 +175,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 					// 监听客户端断开连接
 					return
 				case <-pingTimeout.C:
-					logger.LogError(c, i18n.Translate("relay.ping_goroutine_max_duration_reached"))
+					logger.LogError(c, "ping goroutine max duration reached")
 					return
 				}
 			}
@@ -190,7 +189,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 		defer func() {
 			wg.Done()
 			if r := recover(); r != nil {
-				logger.LogError(c, fmt.Sprintf(i18n.Translate("relay.data_handler_goroutine_panic"), r))
+				logger.LogError(c, fmt.Sprintf("data handler goroutine panic: %v", r))
 				info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonPanic, fmt.Errorf("handler panic: %v", r))
 			}
 			common.SafeSendBool(stopChan, true)
@@ -214,7 +213,7 @@ func StreamScannerHandler(c *gin.Context, resp *http.Response, info *relaycommon
 			close(dataChan)
 			wg.Done()
 			if r := recover(); r != nil {
-				logger.LogError(c, fmt.Sprintf(i18n.Translate("relay.scanner_goroutine_panic"), r))
+				logger.LogError(c, fmt.Sprintf("scanner goroutine panic: %v", r))
 				info.StreamStatus.SetEndReason(relaycommon.StreamEndReasonPanic, fmt.Errorf("scanner panic: %v", r))
 			}
 			common.SafeSendBool(stopChan, true)

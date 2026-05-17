@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"context"
 	"fmt"
 	"sync"
@@ -33,7 +32,7 @@ func StartSubscriptionQuotaResetTask() {
 			return
 		}
 		gopool.Go(func() {
-			logger.LogInfo(context.Background(), fmt.Sprintf(i18n.Translate("svc.subscription_quota_reset_task_started_tick"), subscriptionResetTickInterval))
+			logger.LogInfo(context.Background(), fmt.Sprintf("subscription quota reset task started: tick=%s", subscriptionResetTickInterval))
 			ticker := time.NewTicker(subscriptionResetTickInterval)
 			defer ticker.Stop()
 
@@ -57,7 +56,7 @@ func runSubscriptionQuotaResetOnce() {
 	for {
 		n, err := model.ExpireDueSubscriptions(subscriptionResetBatchSize)
 		if err != nil {
-			logger.LogWarn(ctx, fmt.Sprintf(i18n.Translate("svc.subscription_expire_task_failed"), err))
+			logger.LogWarn(ctx, fmt.Sprintf("subscription expire task failed: %v", err))
 			return
 		}
 		if n == 0 {
@@ -71,7 +70,7 @@ func runSubscriptionQuotaResetOnce() {
 	for {
 		n, err := model.ResetDueSubscriptions(subscriptionResetBatchSize)
 		if err != nil {
-			logger.LogWarn(ctx, fmt.Sprintf(i18n.Translate("svc.subscription_quota_reset_task_failed"), err))
+			logger.LogWarn(ctx, fmt.Sprintf("subscription quota reset task failed: %v", err))
 			return
 		}
 		if n == 0 {
@@ -89,6 +88,6 @@ func runSubscriptionQuotaResetOnce() {
 		}
 	}
 	if common.DebugEnabled && (totalReset > 0 || totalExpired > 0) {
-		logger.LogDebug(ctx, i18n.Translate("svc.subscription_maintenance_reset_count_expired_count"), totalReset, totalExpired)
+		logger.LogDebug(ctx, "subscription maintenance: reset_count=%d, expired_count=%d", totalReset, totalExpired)
 	}
 }

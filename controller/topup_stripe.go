@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"io"
 	"net/http"
 	"strconv"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting"
@@ -46,18 +44,18 @@ type StripeAdaptor struct {
 
 func (*StripeAdaptor) RequestAmount(c *gin.Context, req *StripePayRequest) {
 	if req.Amount < getStripeMinTopup() {
-		c.JSON(200, gin.H{"message": "error", "data": fmt.Sprintf(common.TranslateMessage(c, "topup.min_amount"), getStripeMinTopup())})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": fmt.Sprintf("充值数量不能小于 %d", getStripeMinTopup())})
 		return
 	}
 	id := c.GetInt("id")
 	group, err := model.GetUserGroup(id, true)
 	if err != nil {
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "topup.get_group_failed")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "获取用户分组失败"})
 		return
 	}
 	payMoney := getStripePayMoney(float64(req.Amount), group)
 	if payMoney <= 0.01 {
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "topup.amount_too_low")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "充值金额过低"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "success", "data": strconv.FormatFloat(payMoney, 'f', 2, 64)})
@@ -65,25 +63,25 @@ func (*StripeAdaptor) RequestAmount(c *gin.Context, req *StripePayRequest) {
 
 func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 	if req.PaymentMethod != model.PaymentMethodStripe {
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "payment.channel_not_supported")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "不支持的支付渠道"})
 		return
 	}
 	if req.Amount < getStripeMinTopup() {
-		c.JSON(200, gin.H{"message": fmt.Sprintf(common.TranslateMessage(c, "topup.min_amount"), getStripeMinTopup()), "data": 10})
+		c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("充值数量不能小于 %d", getStripeMinTopup()), "data": 10})
 		return
 	}
 	if req.Amount > 10000 {
-		c.JSON(200, gin.H{"message": common.TranslateMessage(c, "topup.max_amount"), "data": 10})
+		c.JSON(http.StatusOK, gin.H{"message": "充值数量不能大于 10000", "data": 10})
 		return
 	}
 
 	if req.SuccessURL != "" && common.ValidateRedirectURL(req.SuccessURL) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": common.TranslateMessage(c, "topup.success_redirect_untrusted"), "data": ""})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "支付成功重定向URL不在可信任域名列表中", "data": ""})
 		return
 	}
 
 	if req.CancelURL != "" && common.ValidateRedirectURL(req.CancelURL) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": common.TranslateMessage(c, "topup.cancel_redirect_untrusted"), "data": ""})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "支付取消重定向URL不在可信任域名列表中", "data": ""})
 		return
 	}
 
@@ -97,7 +95,7 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 	payLink, err := genStripeLink(referenceId, user.StripeCustomer, user.Email, req.Amount, req.SuccessURL, req.CancelURL)
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Stripe 创建 Checkout Session 失败 user_id=%d trade_no=%s amount=%d error=%q", id, referenceId, req.Amount, err.Error()))
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "payment.start_failed")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})
 		return
 	}
 
@@ -114,7 +112,7 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 	err = topUp.Insert()
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Stripe 创建充值订单失败 user_id=%d trade_no=%s amount=%d error=%q", id, referenceId, req.Amount, err.Error()))
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "payment.create_failed")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "创建订单失败"})
 		return
 	}
 	logger.LogInfo(c.Request.Context(), fmt.Sprintf("Stripe 充值订单创建成功 user_id=%d trade_no=%s amount=%d money=%.2f", id, referenceId, req.Amount, chargedMoney))
@@ -130,7 +128,7 @@ func RequestStripeAmount(c *gin.Context) {
 	var req StripePayRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "common.invalid_params")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "参数错误"})
 		return
 	}
 	stripeAdaptor.RequestAmount(c, &req)
@@ -140,7 +138,7 @@ func RequestStripePay(c *gin.Context) {
 	var req StripePayRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		c.JSON(200, gin.H{"message": "error", "data": common.TranslateMessage(c, "common.invalid_params")})
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "参数错误"})
 		return
 	}
 	stripeAdaptor.RequestPay(c, &req)
@@ -156,7 +154,7 @@ func StripeWebhook(c *gin.Context) {
 
 	payload, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		log.Printf(i18n.Translate("topup.stripe_parse_payload_failed", map[string]any{"Error": err.Error()}))
+		logger.LogError(ctx, fmt.Sprintf("Stripe webhook 读取请求体失败 path=%q client_ip=%s error=%q", c.Request.RequestURI, c.ClientIP(), err.Error()))
 		c.AbortWithStatus(http.StatusServiceUnavailable)
 		return
 	}
@@ -168,7 +166,7 @@ func StripeWebhook(c *gin.Context) {
 	})
 
 	if err != nil {
-		log.Printf(i18n.Translate("topup.stripe_sign_failed", map[string]any{"Error": err.Error()}))
+		logger.LogWarn(ctx, fmt.Sprintf("Stripe webhook 验签失败 path=%q client_ip=%s error=%q", c.Request.RequestURI, c.ClientIP(), err.Error()))
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -185,7 +183,7 @@ func StripeWebhook(c *gin.Context) {
 	case stripe.EventTypeCheckoutSessionAsyncPaymentFailed:
 		sessionAsyncPaymentFailed(ctx, event, callerIp)
 	default:
-		log.Printf(i18n.Translate("topup.stripe_unsupported_event", map[string]any{"Type": string(event.Type)}))
+		logger.LogInfo(ctx, fmt.Sprintf("Stripe webhook 忽略事件 event_type=%s client_ip=%s", string(event.Type), callerIp))
 	}
 
 	c.Status(http.StatusOK)
@@ -288,7 +286,7 @@ func fulfillOrder(ctx context.Context, event stripe.Event, referenceId string, c
 
 	total, _ := strconv.ParseFloat(event.GetObjectValue("amount_total"), 64)
 	currency := strings.ToUpper(event.GetObjectValue("currency"))
-	log.Printf(i18n.Translate("topup.stripe_payment_received", map[string]any{"OrderNo": referenceId, "Amount": fmt.Sprintf("%.2f", total/100), "Currency": currency}))
+	logger.LogInfo(ctx, fmt.Sprintf("Stripe 充值成功 trade_no=%s amount_total=%.2f currency=%s event_type=%s client_ip=%s", referenceId, total/100, currency, string(event.Type), callerIp))
 }
 
 func sessionExpired(ctx context.Context, event stripe.Event) {
@@ -342,7 +340,7 @@ func sessionExpired(ctx context.Context, event stripe.Event) {
 // Returns the checkout session URL or an error if the session creation fails.
 func genStripeLink(referenceId string, customerId string, email string, amount int64, successURL string, cancelURL string) (string, error) {
 	if !strings.HasPrefix(setting.StripeApiSecret, "sk_") && !strings.HasPrefix(setting.StripeApiSecret, "rk_") {
-		return "", fmt.Errorf(i18n.Translate("topup.stripe_invalid_key"))
+		return "", fmt.Errorf("无效的Stripe API密钥")
 	}
 
 	stripe.Key = setting.StripeApiSecret

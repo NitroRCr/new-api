@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -52,7 +51,7 @@ func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error 
 	// 序列化负载
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf(i18n.Translate("svc.failed_to_marshal_webhook_payload"), err)
+		return fmt.Errorf("failed to marshal webhook payload: %v", err)
 	}
 
 	// 创建 HTTP 请求
@@ -80,24 +79,24 @@ func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error 
 
 		resp, err = DoWorkerRequest(workerReq)
 		if err != nil {
-			return fmt.Errorf(i18n.Translate("svc.failed_to_send_webhook_request_through_worker"), err)
+			return fmt.Errorf("failed to send webhook request through worker: %v", err)
 		}
 		defer resp.Body.Close()
 
 		// 检查响应状态
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return fmt.Errorf(i18n.Translate("svc.webhook_request_failed_with_status_code"), resp.StatusCode)
+			return fmt.Errorf("webhook request failed with status code: %d", resp.StatusCode)
 		}
 	} else {
 		// SSRF防护：验证Webhook URL（非Worker模式）
 		fetchSetting := system_setting.GetFetchSetting()
 		if err := common.ValidateURLWithFetchSetting(webhookURL, fetchSetting.EnableSSRFProtection, fetchSetting.AllowPrivateIp, fetchSetting.DomainFilterMode, fetchSetting.IpFilterMode, fetchSetting.DomainList, fetchSetting.IpList, fetchSetting.AllowedPorts, fetchSetting.ApplyIPFilterForDomain); err != nil {
-			return fmt.Errorf(i18n.Translate("svc.request_reject"), err)
+			return fmt.Errorf("request reject: %v", err)
 		}
 
 		req, err = http.NewRequest(http.MethodPost, webhookURL, bytes.NewBuffer(payloadBytes))
 		if err != nil {
-			return fmt.Errorf(i18n.Translate("svc.failed_to_create_webhook_request"), err)
+			return fmt.Errorf("failed to create webhook request: %v", err)
 		}
 
 		// 设置请求头
@@ -113,13 +112,13 @@ func SendWebhookNotify(webhookURL string, secret string, data dto.Notify) error 
 		client := GetHttpClient()
 		resp, err = client.Do(req)
 		if err != nil {
-			return fmt.Errorf(i18n.Translate("svc.failed_to_send_webhook_request"), err)
+			return fmt.Errorf("failed to send webhook request: %v", err)
 		}
 		defer resp.Body.Close()
 
 		// 检查响应状态
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			return fmt.Errorf(i18n.Translate("svc.webhook_request_failed_with_status_code"), resp.StatusCode)
+			return fmt.Errorf("webhook request failed with status code: %d", resp.StatusCode)
 		}
 	}
 

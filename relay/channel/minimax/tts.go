@@ -1,7 +1,6 @@
 package minimax
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -110,7 +109,7 @@ func handleTTSResponse(c *gin.Context, resp *http.Response, info *relaycommon.Re
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return nil, types.NewErrorWithStatusCode(
-			fmt.Errorf(i18n.Translate("relay.failed_to_read_minimax_response"), readErr),
+			fmt.Errorf("failed to read minimax response: %w", readErr),
 			types.ErrorCodeReadResponseBodyFailed,
 			http.StatusInternalServerError,
 		)
@@ -121,7 +120,7 @@ func handleTTSResponse(c *gin.Context, resp *http.Response, info *relaycommon.Re
 	var minimaxResp MiniMaxTTSResponse
 	if unmarshalErr := json.Unmarshal(body, &minimaxResp); unmarshalErr != nil {
 		return nil, types.NewErrorWithStatusCode(
-			fmt.Errorf(i18n.Translate("relay.failed_to_unmarshal_minimax_tts_response"), unmarshalErr),
+			fmt.Errorf("failed to unmarshal minimax TTS response: %w", unmarshalErr),
 			types.ErrorCodeBadResponseBody,
 			http.StatusInternalServerError,
 		)
@@ -130,7 +129,7 @@ func handleTTSResponse(c *gin.Context, resp *http.Response, info *relaycommon.Re
 	// Check base_resp status code
 	if minimaxResp.BaseResp.StatusCode != 0 {
 		return nil, types.NewErrorWithStatusCode(
-			fmt.Errorf(i18n.Translate("relay.minimax_tts_error"), minimaxResp.BaseResp.StatusCode, minimaxResp.BaseResp.StatusMsg),
+			fmt.Errorf("minimax TTS error: %d - %s", minimaxResp.BaseResp.StatusCode, minimaxResp.BaseResp.StatusMsg),
 			types.ErrorCodeBadResponse,
 			http.StatusBadRequest,
 		)
@@ -139,7 +138,7 @@ func handleTTSResponse(c *gin.Context, resp *http.Response, info *relaycommon.Re
 	// Check if we have audio data
 	if minimaxResp.Data.Audio == "" {
 		return nil, types.NewErrorWithStatusCode(
-			errors.New(i18n.Translate("relay.no_audio_data_in_minimax_tts_response")),
+			fmt.Errorf("no audio data in minimax TTS response"),
 			types.ErrorCodeBadResponse,
 			http.StatusBadRequest,
 		)
@@ -152,7 +151,7 @@ func handleTTSResponse(c *gin.Context, resp *http.Response, info *relaycommon.Re
 		audioData, decodeErr := hex.DecodeString(minimaxResp.Data.Audio)
 		if decodeErr != nil {
 			return nil, types.NewErrorWithStatusCode(
-				fmt.Errorf(i18n.Translate("relay.failed_to_decode_hex_audio_data"), decodeErr),
+				fmt.Errorf("failed to decode hex audio data: %w", decodeErr),
 				types.ErrorCodeBadResponse,
 				http.StatusInternalServerError,
 			)
@@ -177,7 +176,7 @@ func handleChatCompletionResponse(c *gin.Context, resp *http.Response, info *rel
 	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return nil, types.NewErrorWithStatusCode(
-			errors.New(i18n.Translate("relay.failed_to_read_minimax_response_2781")),
+			errors.New("failed to read minimax response"),
 			types.ErrorCodeReadResponseBodyFailed,
 			http.StatusInternalServerError,
 		)

@@ -1,7 +1,6 @@
 package openaicompat
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"errors"
 	"strings"
 
@@ -10,7 +9,7 @@ import (
 
 func ResponsesResponseToChatCompletionsResponse(resp *dto.OpenAIResponsesResponse, id string) (*dto.OpenAITextResponse, *dto.Usage, error) {
 	if resp == nil {
-		return nil, nil, errors.New(i18n.Translate("svc.response_is_nil"))
+		return nil, nil, errors.New("response is nil")
 	}
 
 	text := ExtractOutputTextFromResponses(resp)

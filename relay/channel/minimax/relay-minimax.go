@@ -1,7 +1,6 @@
 package minimax
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"fmt"
 
 	channelconstant "github.com/QuantumNous/new-api/constant"
@@ -27,7 +26,7 @@ func GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		case constant.RelayModeAudioSpeech:
 			return fmt.Sprintf("%s/v1/t2a_v2", baseUrl), nil
 		default:
-			return "", fmt.Errorf(i18n.Translate("relay.unsupported_relay_mode"), info.RelayMode)
+			return "", fmt.Errorf("unsupported relay mode: %d", info.RelayMode)
 		}
 	}
 }

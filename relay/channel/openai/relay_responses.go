@@ -1,8 +1,6 @@
 package openai
 
 import (
-	"errors"
-	"github.com/QuantumNous/new-api/i18n"
 	"fmt"
 	"io"
 	"net/http"
@@ -62,7 +60,7 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 	for _, tool := range responsesResponse.Tools {
 		buildToolinfo, ok := info.ResponsesUsageInfo.BuiltInTools[common.Interface2String(tool["type"])]
 		if !ok || buildToolinfo == nil {
-			logger.LogError(c, fmt.Sprintf(i18n.Translate("relay.builtintools_not_found_for_tool_type"), tool["type"]))
+			logger.LogError(c, fmt.Sprintf("BuiltInTools not found for tool type: %v", tool["type"]))
 			continue
 		}
 		buildToolinfo.CallCount++
@@ -72,8 +70,8 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 
 func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.NewAPIError) {
 	if resp == nil || resp.Body == nil {
-		logger.LogError(c, i18n.Translate("relay.invalid_response_or_response_body"))
-		return nil, types.NewError(errors.New(i18n.Translate("relay.invalid_response")), types.ErrorCodeBadResponse)
+		logger.LogError(c, "invalid response or response body")
+		return nil, types.NewError(fmt.Errorf("invalid response"), types.ErrorCodeBadResponse)
 	}
 
 	defer service.CloseResponseBodyGracefully(resp)

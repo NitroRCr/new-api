@@ -1,7 +1,6 @@
 package common
 
 import (
-	"errors"
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
@@ -14,7 +13,7 @@ import (
 func generateMessageID() (string, error) {
 	split := strings.Split(SMTPFrom, "@")
 	if len(split) < 2 {
-		return "", errors.New(Translate("common.invalid_smtp_account"))
+		return "", fmt.Errorf("invalid SMTP account")
 	}
 	domain := strings.Split(SMTPFrom, "@")[1]
 	return fmt.Sprintf("<%d.%s@%s>", time.Now().UnixNano(), GetRandomString(12), domain), nil
@@ -99,7 +98,7 @@ func SendEmail(subject string, receiver string, content string) error {
 		err = smtp.SendMail(addr, auth, SMTPFrom, to, mail)
 	}
 	if err != nil {
-		SysError(fmt.Sprintf(Translate("common.failed_to_send_email_to"), receiver, err))
+		SysError(fmt.Sprintf("failed to send email to %s: %v", receiver, err))
 	}
 	return err
 }

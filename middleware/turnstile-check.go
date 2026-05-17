@@ -6,7 +6,6 @@ import (
 	"net/url"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +27,7 @@ func TurnstileCheck() gin.HandlerFunc {
 			if response == "" {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
-					"message": i18n.T(c, "turnstile.token_empty"),
+					"message": "Turnstile token 为空",
 				})
 				c.Abort()
 				return
@@ -62,7 +61,7 @@ func TurnstileCheck() gin.HandlerFunc {
 			if !res.Success {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
-					"message": i18n.T(c, "turnstile.check_failed"),
+					"message": "Turnstile 校验失败，请刷新重试！",
 				})
 				c.Abort()
 				return
@@ -71,7 +70,7 @@ func TurnstileCheck() gin.HandlerFunc {
 			err = session.Save()
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
-					"message": i18n.T(c, "turnstile.session_error"),
+					"message": "无法保存会话信息，请重试",
 					"success": false,
 				})
 				return

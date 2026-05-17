@@ -1,7 +1,6 @@
 package openai
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"encoding/json"
 	"strings"
 
@@ -109,14 +108,14 @@ func processChatCompletions(streamResp string, streamItems []string, responseTex
 	var streamResponses []dto.ChatCompletionsStreamResponse
 	if err := json.Unmarshal(common.StringToByteSlice(streamResp), &streamResponses); err != nil {
 		// 一次性解析失败，逐个解析
-		common.SysLog(i18n.Translate("relay.error_unmarshalling_stream_response") + err.Error())
+		common.SysLog("error unmarshalling stream response: " + err.Error())
 		for _, item := range streamItems {
 			var streamResponse dto.ChatCompletionsStreamResponse
 			if err := json.Unmarshal(common.StringToByteSlice(item), &streamResponse); err != nil {
 				return err
 			}
 			if err := ProcessStreamResponse(streamResponse, responseTextBuilder, toolCount); err != nil {
-				common.SysLog(i18n.Translate("relay.error_processing_stream_response") + err.Error())
+				common.SysLog("error processing stream response: " + err.Error())
 			}
 		}
 		return nil
@@ -145,7 +144,7 @@ func processCompletions(streamResp string, streamItems []string, responseTextBui
 	var streamResponses []dto.CompletionsStreamResponse
 	if err := json.Unmarshal(common.StringToByteSlice(streamResp), &streamResponses); err != nil {
 		// 一次性解析失败，逐个解析
-		common.SysLog(i18n.Translate("relay.error_unmarshalling_stream_response") + err.Error())
+		common.SysLog("error unmarshalling stream response: " + err.Error())
 		for _, item := range streamItems {
 			var streamResponse dto.CompletionsStreamResponse
 			if err := json.Unmarshal(common.StringToByteSlice(item), &streamResponse); err != nil {
@@ -211,7 +210,7 @@ func HandleFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, lastStream
 	case types.RelayFormatClaude:
 		var streamResponse dto.ChatCompletionsStreamResponse
 		if err := common.Unmarshal(common.StringToByteSlice(lastStreamData), &streamResponse); err != nil {
-			common.SysLog(i18n.Translate("relay.error_unmarshalling_stream_response") + err.Error())
+			common.SysLog("error unmarshalling stream response: " + err.Error())
 			return
 		}
 
@@ -226,7 +225,7 @@ func HandleFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, lastStream
 	case types.RelayFormatGemini:
 		var streamResponse dto.ChatCompletionsStreamResponse
 		if err := common.Unmarshal(common.StringToByteSlice(lastStreamData), &streamResponse); err != nil {
-			common.SysLog(i18n.Translate("relay.error_unmarshalling_stream_response") + err.Error())
+			common.SysLog("error unmarshalling stream response: " + err.Error())
 			return
 		}
 
@@ -244,7 +243,7 @@ func HandleFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, lastStream
 
 		geminiResponseStr, err := common.Marshal(geminiResponse)
 		if err != nil {
-			common.SysLog(i18n.Translate("relay.error_marshalling_gemini_response") + err.Error())
+			common.SysLog("error marshalling gemini response: " + err.Error())
 			return
 		}
 

@@ -11,7 +11,6 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/service"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
@@ -154,7 +153,7 @@ func GetResponseBody(method, url string, channel *model.Channel, headers http.He
 		return nil, err
 	}
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(i18n.Translate("ctrl.status_code"), res.StatusCode)
+		return nil, fmt.Errorf("status code: %d", res.StatusCode)
 	}
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -219,7 +218,7 @@ func updateChannelAIProxyBalance(channel *model.Channel) (float64, error) {
 		return 0, err
 	}
 	if !response.Success {
-		return 0, fmt.Errorf(i18n.Translate("ctrl.code_message"), response.ErrorCode, response.Message)
+		return 0, fmt.Errorf("code: %d, message: %s", response.ErrorCode, response.Message)
 	}
 	channel.UpdateBalance(response.Data.TotalPoints)
 	return response.Data.TotalPoints, nil
@@ -253,7 +252,7 @@ func updateChannelSiliconFlowBalance(channel *model.Channel) (float64, error) {
 		return 0, err
 	}
 	if response.Code != 20000 {
-		return 0, fmt.Errorf(i18n.Translate("ctrl.code_message"), response.Code, response.Message)
+		return 0, fmt.Errorf("code: %d, message: %s", response.Code, response.Message)
 	}
 	balance, err := strconv.ParseFloat(response.Data.TotalBalance, 64)
 	if err != nil {
@@ -282,7 +281,7 @@ func updateChannelDeepSeekBalance(channel *model.Channel) (float64, error) {
 		}
 	}
 	if index == -1 {
-		return 0, errors.New(i18n.Translate("ctrl.currency_cny_not_found"))
+		return 0, errors.New("currency CNY not found")
 	}
 	balance, err := strconv.ParseFloat(response.BalanceInfos[index].TotalBalance, 64)
 	if err != nil {
@@ -349,7 +348,7 @@ func updateChannelMoonshotBalance(channel *model.Channel) (float64, error) {
 		return 0, err
 	}
 	if !response.Status || response.Code != 0 {
-		return 0, fmt.Errorf(i18n.Translate("ctrl.failed_to_update_moonshot_balance_status_code_scode"), response.Status, response.Code, response.Scode)
+		return 0, fmt.Errorf("failed to update moonshot balance, status: %v, code: %d, scode: %s", response.Status, response.Code, response.Scode)
 	}
 	availableBalanceCny := response.Data.AvailableBalance
 	availableBalanceUsd := decimal.NewFromFloat(availableBalanceCny).Div(decimal.NewFromFloat(operation_setting.Price)).InexactFloat64()
@@ -368,7 +367,7 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 			baseURL = channel.GetBaseURL()
 		}
 	case constant.ChannelTypeAzure:
-		return 0, fmt.Errorf("%s", common.TranslateMessage(nil, "common.not_implemented"))
+		return 0, errors.New("尚未实现")
 	case constant.ChannelTypeCustom:
 		baseURL = channel.GetBaseURL()
 	//case common.ChannelTypeOpenAISB:
@@ -388,7 +387,7 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 	case constant.ChannelTypeMoonshot:
 		return updateChannelMoonshotBalance(channel)
 	default:
-		return 0, fmt.Errorf("%s", common.TranslateMessage(nil, "common.not_implemented"))
+		return 0, errors.New("尚未实现")
 	}
 	url := fmt.Sprintf("%s/v1/dashboard/billing/subscription", baseURL)
 
@@ -436,7 +435,7 @@ func UpdateChannelBalance(c *gin.Context) {
 	if channel.ChannelInfo.IsMultiKey {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": common.TranslateMessage(c, "channel.not_multi_key"),
+			"message": "多密钥渠道不支持余额查询",
 		})
 		return
 	}
@@ -474,7 +473,7 @@ func updateAllChannelsBalance() error {
 		} else {
 			// err is nil & balance <= 0 means quota is used up
 			if balance <= 0 {
-				service.DisableChannel(*types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, "", channel.GetAutoBan()), common.TranslateMessage(nil, "quota.insufficient"))
+				service.DisableChannel(*types.NewChannelError(channel.Id, channel.Type, channel.Name, channel.ChannelInfo.IsMultiKey, "", channel.GetAutoBan()), "余额不足")
 			}
 		}
 		time.Sleep(common.RequestInterval)
@@ -499,8 +498,8 @@ func UpdateAllChannelsBalance(c *gin.Context) {
 func AutomaticallyUpdateChannels(frequency int) {
 	for {
 		time.Sleep(time.Duration(frequency) * time.Minute)
-		common.SysLog(i18n.Translate("ctrl.updating_all_channels"))
+		common.SysLog("updating all channels")
 		_ = updateAllChannelsBalance()
-		common.SysLog(i18n.Translate("ctrl.channels_update_done"))
+		common.SysLog("channels update done")
 	}
 }

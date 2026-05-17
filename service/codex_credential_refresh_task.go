@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"context"
 	"fmt"
 	"strings"
@@ -40,7 +39,7 @@ func StartCodexCredentialAutoRefreshTask() {
 		}
 
 		gopool.Go(func() {
-			logger.LogInfo(context.Background(), fmt.Sprintf(i18n.Translate("svc.codex_credential_auto_refresh_task_started_tick"), codexCredentialRefreshTickInterval, codexCredentialRefreshThreshold))
+			logger.LogInfo(context.Background(), fmt.Sprintf("codex credential auto-refresh task started: tick=%s threshold=%s", codexCredentialRefreshTickInterval, codexCredentialRefreshThreshold))
 
 			ticker := time.NewTicker(codexCredentialRefreshTickInterval)
 			defer ticker.Stop()
@@ -80,7 +79,7 @@ func runCodexCredentialAutoRefreshOnce() {
 			Offset(offset).
 			Find(&channels).Error
 		if err != nil {
-			logger.LogError(ctx, fmt.Sprintf(i18n.Translate("svc.codex_credential_auto_refresh_query_channels_failed"), err))
+			logger.LogError(ctx, fmt.Sprintf("codex credential auto-refresh: query channels failed: %v", err))
 			return
 		}
 		if len(channels) == 0 {
@@ -122,7 +121,7 @@ func runCodexCredentialAutoRefreshOnce() {
 			newKey, _, err := RefreshCodexChannelCredential(refreshCtx, ch.Id, CodexCredentialRefreshOptions{ResetCaches: false})
 			cancel()
 			if err != nil {
-				logger.LogWarn(ctx, fmt.Sprintf(i18n.Translate("svc.codex_credential_auto_refresh_channel_id_name"), ch.Id, ch.Name, err))
+				logger.LogWarn(ctx, fmt.Sprintf("codex credential auto-refresh: channel_id=%d name=%s refresh failed: %v", ch.Id, ch.Name, err))
 				continue
 			}
 
@@ -135,7 +134,7 @@ func runCodexCredentialAutoRefreshOnce() {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					logger.LogWarn(ctx, fmt.Sprintf(i18n.Translate("svc.codex_credential_auto_refresh_initchannelcache_panic"), r))
+					logger.LogWarn(ctx, fmt.Sprintf("codex credential auto-refresh: InitChannelCache panic: %v", r))
 				}
 			}()
 			model.InitChannelCache()
@@ -144,6 +143,6 @@ func runCodexCredentialAutoRefreshOnce() {
 	}
 
 	if common.DebugEnabled {
-		logger.LogDebug(ctx, i18n.Translate("svc.codex_credential_auto_refresh_scanned_refreshed"), scanned, refreshed)
+		logger.LogDebug(ctx, "codex credential auto-refresh: scanned=%d refreshed=%d", scanned, refreshed)
 	}
 }

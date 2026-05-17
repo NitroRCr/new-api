@@ -72,15 +72,15 @@ func AddRedemption(c *gin.Context) {
 		return
 	}
 	if utf8.RuneCountInString(redemption.Name) == 0 || utf8.RuneCountInString(redemption.Name) > 20 {
-		common.ApiErrorI18n(c, "redemption.name_length")
+		common.ApiErrorI18n(c, i18n.MsgRedemptionNameLength)
 		return
 	}
 	if redemption.Count <= 0 {
-		common.ApiErrorI18n(c, "redemption.count_positive")
+		common.ApiErrorI18n(c, i18n.MsgRedemptionCountPositive)
 		return
 	}
 	if redemption.Count > 100 {
-		common.ApiErrorI18n(c, "redemption.count_max")
+		common.ApiErrorI18n(c, i18n.MsgRedemptionCountMax)
 		return
 	}
 	if valid, msg := validateExpiredTime(c, redemption.ExpiredTime); !valid {
@@ -100,10 +100,10 @@ func AddRedemption(c *gin.Context) {
 		}
 		err = cleanRedemption.Insert()
 		if err != nil {
-			common.SysError(i18n.Translate("ctrl.failed_to_insert_redemption") + err.Error())
+			common.SysError("failed to insert redemption: " + err.Error())
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": i18n.T(c, "redemption.create_failed"),
+				"message": i18n.T(c, i18n.MsgRedemptionCreateFailed),
 				"data":    keys,
 			})
 			return
@@ -187,7 +187,7 @@ func DeleteInvalidRedemption(c *gin.Context) {
 
 func validateExpiredTime(c *gin.Context, expired int64) (bool, string) {
 	if expired != 0 && expired < common.GetTimestamp() {
-		return false, i18n.T(c, "redemption.expire_time_invalid")
+		return false, i18n.T(c, i18n.MsgRedemptionExpireTimeInvalid)
 	}
 	return true, ""
 }

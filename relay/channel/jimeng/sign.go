@@ -1,7 +1,6 @@
 package jimeng
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -46,7 +45,7 @@ func SetPayloadHash(c *gin.Context, req any) error {
 	if err != nil {
 		return err
 	}
-	logger.LogInfo(c, fmt.Sprintf(i18n.Translate("relay.setpayloadhash_body"), body))
+	logger.LogInfo(c, fmt.Sprintf("SetPayloadHash body: %s", body))
 	payloadHash := sha256.Sum256(body)
 	hexPayloadHash := hex.EncodeToString(payloadHash[:])
 	c.Set(HexPayloadHashKey, hexPayloadHash)
@@ -78,7 +77,7 @@ func Sign(c *gin.Context, req *http.Request, apiKey string) error {
 	u := req.URL
 	keyParts := strings.Split(apiKey, "|")
 	if len(keyParts) != 2 {
-		return errors.New(i18n.Translate("relay.invalid_api_key_format_for_jimeng_expected_ak"))
+		return errors.New("invalid api key format for jimeng: expected 'ak|sk'")
 	}
 	accessKey := strings.TrimSpace(keyParts[0])
 	secretKey := strings.TrimSpace(keyParts[1])

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"context"
 	"encoding/json"
 	"io"
@@ -214,7 +213,7 @@ func DoMidjourneyHttpRequest(c *gin.Context, timeout time.Duration, fullRequestU
 	defer cancel()
 	resp, err := GetHttpClient().Do(req)
 	if err != nil {
-		common.SysLog(i18n.Translate("svc.do_request_failed") + err.Error())
+		common.SysLog("do request failed: " + err.Error())
 		return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "do_request_failed", http.StatusInternalServerError), nullBytes, err
 	}
 	statusCode := resp.StatusCode
@@ -237,7 +236,7 @@ func DoMidjourneyHttpRequest(c *gin.Context, timeout time.Duration, fullRequestU
 	}
 	CloseResponseBodyGracefully(resp)
 	respStr := string(responseBody)
-	log.Printf(i18n.Translate("svc.respstr"), respStr)
+	log.Printf("respStr: %s", respStr)
 	if respStr == "" {
 		return MidjourneyErrorWithStatusCodeWrapper(constant.MjErrorUnknown, "empty_response_body", statusCode), responseBody, nil
 	} else {

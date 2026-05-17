@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/pkg/cachex"
 	"github.com/samber/hot"
 	"gorm.io/gorm"
@@ -34,8 +33,8 @@ const (
 )
 
 var (
-	ErrSubscriptionOrderNotFound      = errors.New("model.subscription_order_not_found")
-	ErrSubscriptionOrderStatusInvalid = errors.New("model.subscription_order_status_invalid")
+	ErrSubscriptionOrderNotFound      = errors.New("subscription order not found")
+	ErrSubscriptionOrderStatusInvalid = errors.New("subscription order status invalid")
 )
 
 const (
@@ -274,10 +273,10 @@ type SubscriptionSummary struct {
 
 func calcPlanEndTime(start time.Time, plan *SubscriptionPlan) (int64, error) {
 	if plan == nil {
-		return 0, errors.New(i18n.Translate("model.plan_is_nil"))
+		return 0, errors.New("plan is nil")
 	}
 	if plan.DurationValue <= 0 && plan.DurationUnit != SubscriptionDurationCustom {
-		return 0, errors.New(i18n.Translate("model.duration_value_must_be_0"))
+		return 0, errors.New("duration_value must be > 0")
 	}
 	switch plan.DurationUnit {
 	case SubscriptionDurationYear:
@@ -290,11 +289,11 @@ func calcPlanEndTime(start time.Time, plan *SubscriptionPlan) (int64, error) {
 		return start.Add(time.Duration(plan.DurationValue) * time.Hour).Unix(), nil
 	case SubscriptionDurationCustom:
 		if plan.CustomSeconds <= 0 {
-			return 0, errors.New(i18n.Translate("model.custom_seconds_must_be_0"))
+			return 0, errors.New("custom_seconds must be > 0")
 		}
 		return start.Add(time.Duration(plan.CustomSeconds) * time.Second).Unix(), nil
 	default:
-		return 0, fmt.Errorf(i18n.Translate("model.invalid_duration_unit"), plan.DurationUnit)
+		return 0, fmt.Errorf("invalid duration_unit: %s", plan.DurationUnit)
 	}
 }
 
@@ -354,7 +353,7 @@ func GetSubscriptionPlanById(id int) (*SubscriptionPlan, error) {
 
 func getSubscriptionPlanByIdTx(tx *gorm.DB, id int) (*SubscriptionPlan, error) {
 	if id <= 0 {
-		return nil, errors.New(i18n.Translate("model.invalid_plan_id"))
+		return nil, errors.New("invalid plan id")
 	}
 	key := subscriptionPlanCacheKey(id)
 	if key != "" {
@@ -376,7 +375,7 @@ func getSubscriptionPlanByIdTx(tx *gorm.DB, id int) (*SubscriptionPlan, error) {
 
 func CountUserSubscriptionsByPlan(userId int, planId int) (int64, error) {
 	if userId <= 0 || planId <= 0 {
-		return 0, errors.New(i18n.Translate("model.invalid_userid_or_planid"))
+		return 0, errors.New("invalid userId or planId")
 	}
 	var count int64
 	if err := DB.Model(&UserSubscription{}).
@@ -389,7 +388,7 @@ func CountUserSubscriptionsByPlan(userId int, planId int) (int64, error) {
 
 func getUserGroupByIdTx(tx *gorm.DB, userId int) (string, error) {
 	if userId <= 0 {
-		return "", errors.New(i18n.Translate("model.invalid_userid"))
+		return "", errors.New("invalid userId")
 	}
 	if tx == nil {
 		tx = DB
@@ -403,7 +402,7 @@ func getUserGroupByIdTx(tx *gorm.DB, userId int) (string, error) {
 
 func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now int64) (string, error) {
 	if tx == nil || sub == nil {
-		return "", errors.New(i18n.Translate("model.invalid_downgrade_args"))
+		return "", errors.New("invalid downgrade args")
 	}
 	upgradeGroup := strings.TrimSpace(sub.UpgradeGroup)
 	if upgradeGroup == "" {
@@ -438,13 +437,13 @@ func downgradeUserGroupForSubscriptionTx(tx *gorm.DB, sub *UserSubscription, now
 
 func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *SubscriptionPlan, source string) (*UserSubscription, error) {
 	if tx == nil {
-		return nil, errors.New(i18n.Translate("model.tx_is_nil"))
+		return nil, errors.New("tx is nil")
 	}
 	if plan == nil || plan.Id == 0 {
-		return nil, errors.New(i18n.Translate("model.invalid_plan"))
+		return nil, errors.New("invalid plan")
 	}
 	if userId <= 0 {
-		return nil, errors.New(i18n.Translate("model.invalid_user_id"))
+		return nil, errors.New("invalid user id")
 	}
 	if plan.MaxPurchasePerUser > 0 {
 		var count int64
@@ -454,7 +453,7 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 			return nil, err
 		}
 		if count >= int64(plan.MaxPurchasePerUser) {
-			return nil, errors.New(i18n.Translate("subscription.purchase_limit_reached"))
+			return nil, errors.New("已达到该套餐购买上限")
 		}
 	}
 	nowUnix := GetDBTimestamp()
@@ -511,7 +510,7 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 // actualPaymentMethod updates the order's PaymentMethod to reflect the real payment type used (empty skips update).
 func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedPaymentProvider string, actualPaymentMethod string) error {
 	if tradeNo == "" {
-		return errors.New(i18n.Translate("model.tradeno_is_empty"))
+		return errors.New("tradeNo is empty")
 	}
 	refCol := "`trade_no`"
 	if common.UsingPostgreSQL {
@@ -575,7 +574,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		_ = UpdateUserGroupCache(logUserId, upgradeGroup)
 	}
 	if logUserId > 0 {
-		msg := i18n.Translate("log.subscription_purchase", map[string]any{"Plan": logPlanTitle, "Money": logMoney, "Method": logPaymentMethod})
+		msg := fmt.Sprintf("订阅购买成功，套餐: %s，支付金额: %.2f，支付方式: %s", logPlanTitle, logMoney, logPaymentMethod)
 		RecordLog(logUserId, LogTypeTopup, msg)
 	}
 	return nil
@@ -583,7 +582,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 
 func upsertSubscriptionTopUpTx(tx *gorm.DB, order *SubscriptionOrder) error {
 	if tx == nil || order == nil {
-		return errors.New(i18n.Translate("model.invalid_subscription_order"))
+		return errors.New("invalid subscription order")
 	}
 	now := common.GetTimestamp()
 	var topup TopUp
@@ -619,7 +618,7 @@ func upsertSubscriptionTopUpTx(tx *gorm.DB, order *SubscriptionOrder) error {
 
 func ExpireSubscriptionOrder(tradeNo string, expectedPaymentProvider string) error {
 	if tradeNo == "" {
-		return errors.New(i18n.Translate("model.tradeno_is_empty"))
+		return errors.New("tradeNo is empty")
 	}
 	refCol := "`trade_no`"
 	if common.UsingPostgreSQL {
@@ -645,7 +644,7 @@ func ExpireSubscriptionOrder(tradeNo string, expectedPaymentProvider string) err
 // Admin bind (no payment). Creates a UserSubscription from a plan.
 func AdminBindSubscription(userId int, planId int, sourceNote string) (string, error) {
 	if userId <= 0 || planId <= 0 {
-		return "", errors.New(i18n.Translate("model.invalid_userid_or_planid"))
+		return "", errors.New("invalid userId or planId")
 	}
 	plan, err := GetSubscriptionPlanById(planId)
 	if err != nil {
@@ -660,7 +659,7 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 	}
 	if strings.TrimSpace(plan.UpgradeGroup) != "" {
 		_ = UpdateUserGroupCache(userId, plan.UpgradeGroup)
-		return i18n.Translate("subscription.group_upgrade", map[string]any{"Group": plan.UpgradeGroup}), nil
+		return fmt.Sprintf("用户分组将升级到 %s", plan.UpgradeGroup), nil
 	}
 	return "", nil
 }
@@ -668,7 +667,7 @@ func AdminBindSubscription(userId int, planId int, sourceNote string) (string, e
 // GetAllActiveUserSubscriptions returns all active subscriptions for a user.
 func GetAllActiveUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 	if userId <= 0 {
-		return nil, errors.New(i18n.Translate("model.invalid_userid"))
+		return nil, errors.New("invalid userId")
 	}
 	now := common.GetTimestamp()
 	var subs []UserSubscription
@@ -685,7 +684,7 @@ func GetAllActiveUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 // This is a lightweight existence check to avoid heavy pre-consume transactions.
 func HasActiveUserSubscription(userId int) (bool, error) {
 	if userId <= 0 {
-		return false, errors.New(i18n.Translate("model.invalid_userid"))
+		return false, errors.New("invalid userId")
 	}
 	now := common.GetTimestamp()
 	var count int64
@@ -700,7 +699,7 @@ func HasActiveUserSubscription(userId int) (bool, error) {
 // GetAllUserSubscriptions returns all subscriptions (active and expired) for a user.
 func GetAllUserSubscriptions(userId int) ([]SubscriptionSummary, error) {
 	if userId <= 0 {
-		return nil, errors.New(i18n.Translate("model.invalid_userid"))
+		return nil, errors.New("invalid userId")
 	}
 	var subs []UserSubscription
 	err := DB.Where("user_id = ?", userId).
@@ -729,7 +728,7 @@ func buildSubscriptionSummaries(subs []UserSubscription) []SubscriptionSummary {
 // AdminInvalidateUserSubscription marks a user subscription as cancelled and ends it immediately.
 func AdminInvalidateUserSubscription(userSubscriptionId int) (string, error) {
 	if userSubscriptionId <= 0 {
-		return "", errors.New(i18n.Translate("model.invalid_usersubscriptionid"))
+		return "", errors.New("invalid userSubscriptionId")
 	}
 	now := common.GetTimestamp()
 	cacheGroup := ""
@@ -766,7 +765,7 @@ func AdminInvalidateUserSubscription(userSubscriptionId int) (string, error) {
 		_ = UpdateUserGroupCache(userId, cacheGroup)
 	}
 	if downgradeGroup != "" {
-		return i18n.Translate("subscription.group_downgrade", map[string]any{"Group": downgradeGroup}), nil
+		return fmt.Sprintf("用户分组将回退到 %s", downgradeGroup), nil
 	}
 	return "", nil
 }
@@ -774,7 +773,7 @@ func AdminInvalidateUserSubscription(userSubscriptionId int) (string, error) {
 // AdminDeleteUserSubscription hard-deletes a user subscription.
 func AdminDeleteUserSubscription(userSubscriptionId int) (string, error) {
 	if userSubscriptionId <= 0 {
-		return "", errors.New(i18n.Translate("model.invalid_usersubscriptionid"))
+		return "", errors.New("invalid userSubscriptionId")
 	}
 	now := common.GetTimestamp()
 	cacheGroup := ""
@@ -807,7 +806,7 @@ func AdminDeleteUserSubscription(userSubscriptionId int) (string, error) {
 		_ = UpdateUserGroupCache(userId, cacheGroup)
 	}
 	if downgradeGroup != "" {
-		return i18n.Translate("subscription.group_downgrade", map[string]any{"Group": downgradeGroup}), nil
+		return fmt.Sprintf("用户分组将回退到 %s", downgradeGroup), nil
 	}
 	return "", nil
 }
@@ -933,7 +932,7 @@ func (r *SubscriptionPreConsumeRecord) BeforeUpdate(tx *gorm.DB) error {
 
 func maybeResetUserSubscriptionWithPlanTx(tx *gorm.DB, sub *UserSubscription, plan *SubscriptionPlan, now int64) error {
 	if tx == nil || sub == nil || plan == nil {
-		return errors.New(i18n.Translate("model.invalid_reset_args"))
+		return errors.New("invalid reset args")
 	}
 	if sub.NextResetTime > 0 && sub.NextResetTime > now {
 		return nil
@@ -970,13 +969,13 @@ func maybeResetUserSubscriptionWithPlanTx(tx *gorm.DB, sub *UserSubscription, pl
 // PreConsumeUserSubscription pre-consumes from any active subscription total quota.
 func PreConsumeUserSubscription(requestId string, userId int, modelName string, quotaType int, amount int64) (*SubscriptionPreConsumeResult, error) {
 	if userId <= 0 {
-		return nil, errors.New(i18n.Translate("model.invalid_userid"))
+		return nil, errors.New("invalid userId")
 	}
 	if strings.TrimSpace(requestId) == "" {
-		return nil, errors.New(i18n.Translate("model.requestid_is_empty"))
+		return nil, errors.New("requestId is empty")
 	}
 	if amount <= 0 {
-		return nil, errors.New(i18n.Translate("model.amount_must_be_0"))
+		return nil, errors.New("amount must be > 0")
 	}
 	now := GetDBTimestamp()
 
@@ -990,7 +989,7 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 		}
 		if query.RowsAffected > 0 {
 			if existing.Status == "refunded" {
-				return errors.New(i18n.Translate("model.subscription_pre_consume_already_refunded"))
+				return errors.New("subscription pre-consume already refunded")
 			}
 			var sub UserSubscription
 			if err := tx.Where("id = ?", existing.UserSubscriptionId).First(&sub).Error; err != nil {
@@ -1009,10 +1008,10 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 			Where("user_id = ? AND status = ? AND end_time > ?", userId, "active", now).
 			Order("end_time asc, id asc").
 			Find(&subs).Error; err != nil {
-			return errors.New(i18n.Translate("model.no_active_subscription"))
+			return errors.New("no active subscription")
 		}
 		if len(subs) == 0 {
-			return errors.New(i18n.Translate("model.no_active_subscription"))
+			return errors.New("no active subscription")
 		}
 		for _, candidate := range subs {
 			sub := candidate
@@ -1041,7 +1040,7 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 				var dup SubscriptionPreConsumeRecord
 				if err2 := tx.Where("request_id = ?", requestId).First(&dup).Error; err2 == nil {
 					if dup.Status == "refunded" {
-						return errors.New(i18n.Translate("model.subscription_pre_consume_already_refunded"))
+						return errors.New("subscription pre-consume already refunded")
 					}
 					returnValue.UserSubscriptionId = sub.Id
 					returnValue.PreConsumed = dup.PreConsumed
@@ -1063,7 +1062,7 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 			returnValue.AmountUsedAfter = sub.AmountUsed
 			return nil
 		}
-		return fmt.Errorf(i18n.Translate("model.subscription_quota_insufficient_need"), amount)
+		return fmt.Errorf("subscription quota insufficient, need=%d", amount)
 	})
 	if err != nil {
 		return nil, err
@@ -1074,7 +1073,7 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 // RefundSubscriptionPreConsume is idempotent and refunds pre-consumed subscription quota by requestId.
 func RefundSubscriptionPreConsume(requestId string) error {
 	if strings.TrimSpace(requestId) == "" {
-		return errors.New(i18n.Translate("model.requestid_is_empty"))
+		return errors.New("requestId is empty")
 	}
 	return DB.Transaction(func(tx *gorm.DB) error {
 		var record SubscriptionPreConsumeRecord
@@ -1157,7 +1156,7 @@ type SubscriptionPlanInfo struct {
 
 func GetSubscriptionPlanInfoByUserSubscriptionId(userSubscriptionId int) (*SubscriptionPlanInfo, error) {
 	if userSubscriptionId <= 0 {
-		return nil, errors.New(i18n.Translate("model.invalid_usersubscriptionid"))
+		return nil, errors.New("invalid userSubscriptionId")
 	}
 	cacheKey := fmt.Sprintf("sub:%d", userSubscriptionId)
 	if cached, found, err := getSubscriptionPlanInfoCache().Get(cacheKey); err == nil && found {
@@ -1182,7 +1181,7 @@ func GetSubscriptionPlanInfoByUserSubscriptionId(userSubscriptionId int) (*Subsc
 // Update subscription used amount by delta (positive consume more, negative refund).
 func PostConsumeUserSubscriptionDelta(userSubscriptionId int, delta int64) error {
 	if userSubscriptionId <= 0 {
-		return errors.New(i18n.Translate("model.invalid_usersubscriptionid"))
+		return errors.New("invalid userSubscriptionId")
 	}
 	if delta == 0 {
 		return nil
@@ -1199,7 +1198,7 @@ func PostConsumeUserSubscriptionDelta(userSubscriptionId int, delta int64) error
 			newUsed = 0
 		}
 		if sub.AmountTotal > 0 && newUsed > sub.AmountTotal {
-			return fmt.Errorf(i18n.Translate("model.subscription_used_exceeds_total_used_otal"), newUsed, sub.AmountTotal)
+			return fmt.Errorf("subscription used exceeds total, used=%d total=%d", newUsed, sub.AmountTotal)
 		}
 		sub.AmountUsed = newUsed
 		return tx.Save(&sub).Error

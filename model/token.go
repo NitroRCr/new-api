@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"
@@ -101,20 +100,20 @@ func sanitizeLikePattern(input string) (string, error) {
 
 	// 2. 连续的 % 直接拒绝
 	if strings.Contains(input, "%%") {
-		return "", errors.New(i18n.Translate("token.search_consecutive_model"))
+		return "", errors.New("搜索模式中不允许包含连续的 % 通配符")
 	}
 
 	// 3. 统计 % 数量，不得超过 2
 	count := strings.Count(input, "%")
 	if count > 2 {
-		return "", errors.New(i18n.Translate("token.search_max_model"))
+		return "", errors.New("搜索模式中最多允许包含 2 个 % 通配符")
 	}
 
 	// 4. 含 % 时，去掉 % 后关键词长度必须 >= 2
 	if count > 0 {
 		stripped := strings.ReplaceAll(input, "%", "")
 		if len(stripped) < 2 {
-			return "", errors.New(i18n.Translate("token.search_min_model"))
+			return "", errors.New("使用模糊搜索时，关键词长度至少为 2 个字符")
 		}
 		return input, nil
 	}
@@ -144,11 +143,11 @@ func SearchUserTokens(userId int, keyword string, token string, offset int, limi
 	if hasFuzzy {
 		count, err := CountUserTokens(userId)
 		if err != nil {
-			common.SysLog(i18n.Translate("model.failed_to_count_user_tokens") + err.Error())
-			return nil, 0, errors.New(i18n.Translate("token.count_failed_model"))
+			common.SysLog("failed to count user tokens: " + err.Error())
+			return nil, 0, errors.New("获取令牌数量失败")
 		}
 		if int(count) > maxTokens {
-			return nil, 0, errors.New(i18n.Translate("token.count_exceed_model"))
+			return nil, 0, errors.New("令牌数量超过上限，仅允许精确搜索，请勿使用 % 通配符")
 		}
 	}
 
@@ -173,15 +172,15 @@ func SearchUserTokens(userId int, keyword string, token string, offset int, limi
 	// 先查匹配总数（用于分页，受 maxTokens 上限保护，避免全表 COUNT）
 	err = baseQuery.Limit(maxTokens).Count(&total).Error
 	if err != nil {
-		common.SysError(i18n.Translate("model.failed_to_count_search_tokens") + err.Error())
-		return nil, 0, errors.New(i18n.Translate("token.search_failed_model"))
+		common.SysError("failed to count search tokens: " + err.Error())
+		return nil, 0, errors.New("搜索令牌失败")
 	}
 
 	// 再分页查数据
 	err = baseQuery.Order("id desc").Offset(offset).Limit(limit).Find(&tokens).Error
 	if err != nil {
-		common.SysError(i18n.Translate("model.failed_to_search_tokens") + err.Error())
-		return nil, 0, errors.New(i18n.Translate("token.search_failed_model"))
+		common.SysError("failed to search tokens: " + err.Error())
+		return nil, 0, errors.New("搜索令牌失败")
 	}
 	return tokens, total, nil
 }
@@ -202,7 +201,7 @@ func ValidateUserToken(key string) (token *Token, err error) {
 				token.Status = common.TokenStatusExpired
 				err := token.SelectUpdate()
 				if err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_update_token_status") + err.Error())
+					common.SysLog("failed to update token status" + err.Error())
 				}
 			}
 			return token, ErrTokenInvalid
@@ -212,14 +211,14 @@ func ValidateUserToken(key string) (token *Token, err error) {
 				token.Status = common.TokenStatusExhausted
 				err := token.SelectUpdate()
 				if err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_update_token_status") + err.Error())
+					common.SysLog("failed to update token status" + err.Error())
 				}
 			}
 			return token, ErrTokenInvalid
 		}
 		return token, nil
 	}
-	common.SysLog(i18n.Translate("model.validateusertoken_failed_to_get_token") + err.Error())
+	common.SysLog("ValidateUserToken: failed to get token: " + err.Error())
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrTokenInvalid
 	}
@@ -228,7 +227,7 @@ func ValidateUserToken(key string) (token *Token, err error) {
 
 func GetTokenByIds(id int, userId int) (*Token, error) {
 	if id == 0 || userId == 0 {
-		return nil, errors.New(i18n.Translate("token.id_or_user_id_empty"))
+		return nil, errors.New("id 或 userId 为空！")
 	}
 	token := Token{Id: id, UserId: userId}
 	var err error = nil
@@ -238,7 +237,7 @@ func GetTokenByIds(id int, userId int) (*Token, error) {
 
 func GetTokenById(id int) (*Token, error) {
 	if id == 0 {
-		return nil, errors.New(i18n.Translate("token.id_empty"))
+		return nil, errors.New("id 为空！")
 	}
 	token := Token{Id: id}
 	var err error = nil
@@ -246,7 +245,7 @@ func GetTokenById(id int) (*Token, error) {
 	if shouldUpdateRedis(true, err) {
 		gopool.Go(func() {
 			if err := cacheSetToken(token); err != nil {
-				common.SysLog(i18n.Translate("model.failed_to_update_user_status_cache") + err.Error())
+				common.SysLog("failed to update user status cache: " + err.Error())
 			}
 		})
 	}
@@ -259,7 +258,7 @@ func GetTokenByKey(key string, fromDB bool) (token *Token, err error) {
 		if shouldUpdateRedis(fromDB, err) && token != nil {
 			gopool.Go(func() {
 				if err := cacheSetToken(*token); err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_update_user_status_cache") + err.Error())
+					common.SysLog("failed to update user status cache: " + err.Error())
 				}
 			})
 		}
@@ -290,7 +289,7 @@ func (token *Token) Update() (err error) {
 			gopool.Go(func() {
 				err := cacheSetToken(*token)
 				if err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_update_token_cache") + err.Error())
+					common.SysLog("failed to update token cache: " + err.Error())
 				}
 			})
 		}
@@ -306,7 +305,7 @@ func (token *Token) SelectUpdate() (err error) {
 			gopool.Go(func() {
 				err := cacheSetToken(*token)
 				if err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_update_token_cache") + err.Error())
+					common.SysLog("failed to update token cache: " + err.Error())
 				}
 			})
 		}
@@ -321,7 +320,7 @@ func (token *Token) Delete() (err error) {
 			gopool.Go(func() {
 				err := cacheDeleteToken(token.Key)
 				if err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_delete_token_cache") + err.Error())
+					common.SysLog("failed to delete token cache: " + err.Error())
 				}
 			})
 		}
@@ -363,7 +362,7 @@ func DisableModelLimits(tokenId int) error {
 func DeleteTokenById(id int, userId int) (err error) {
 	// Why we need userId here? In case user want to delete other's token.
 	if id == 0 || userId == 0 {
-		return errors.New(i18n.Translate("token.id_or_user_id_empty2"))
+		return errors.New("id 或 userId 为空！")
 	}
 	token := Token{Id: id, UserId: userId}
 	err = DB.Where(token).First(&token).Error
@@ -375,13 +374,13 @@ func DeleteTokenById(id int, userId int) (err error) {
 
 func IncreaseTokenQuota(tokenId int, key string, quota int) (err error) {
 	if quota < 0 {
-		return errors.New(i18n.Translate("quota.cannot_be_negative"))
+		return errors.New("quota 不能为负数！")
 	}
 	if common.RedisEnabled {
 		gopool.Go(func() {
 			err := cacheIncrTokenQuota(key, int64(quota))
 			if err != nil {
-				common.SysLog(i18n.Translate("model.failed_to_increase_token_quota") + err.Error())
+				common.SysLog("failed to increase token quota: " + err.Error())
 			}
 		})
 	}
@@ -405,13 +404,13 @@ func increaseTokenQuota(id int, quota int) (err error) {
 
 func DecreaseTokenQuota(id int, key string, quota int) (err error) {
 	if quota < 0 {
-		return errors.New(i18n.Translate("quota.cannot_be_negative"))
+		return errors.New("quota 不能为负数！")
 	}
 	if common.RedisEnabled {
 		gopool.Go(func() {
 			err := cacheDecrTokenQuota(key, int64(quota))
 			if err != nil {
-				common.SysLog(i18n.Translate("model.failed_to_decrease_token_quota") + err.Error())
+				common.SysLog("failed to decrease token quota: " + err.Error())
 			}
 		})
 	}
@@ -443,7 +442,7 @@ func CountUserTokens(userId int) (int64, error) {
 // BatchDeleteTokens 删除指定用户的一组令牌，返回成功删除数量
 func BatchDeleteTokens(ids []int, userId int) (int, error) {
 	if len(ids) == 0 {
-		return 0, errors.New(i18n.Translate("quota.ids_cannot_be_empty"))
+		return 0, errors.New("ids 不能为空！")
 	}
 
 	tx := DB.Begin()

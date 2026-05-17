@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"fmt"
 	"hash/fnv"
 	"regexp"
@@ -144,7 +143,7 @@ func GetChannelAffinityCacheStats() ChannelAffinityCacheStats {
 
 	keys, err := cache.Keys()
 	if err != nil {
-		common.SysError(fmt.Sprintf(i18n.Translate("svc.channel_affinity_cache_list_keys_failed_err"), err))
+		common.SysError(fmt.Sprintf("channel affinity cache list keys failed: err=%v", err))
 		keys = nil
 	}
 	total := len(keys)
@@ -200,12 +199,12 @@ func ClearChannelAffinityCacheAll() int {
 	cache := getChannelAffinityCache()
 	keys, err := cache.Keys()
 	if err != nil {
-		common.SysError(fmt.Sprintf(i18n.Translate("svc.channel_affinity_cache_list_keys_failed_err"), err))
+		common.SysError(fmt.Sprintf("channel affinity cache list keys failed: err=%v", err))
 		keys = nil
 	}
 	if len(keys) > 0 {
 		if _, err := cache.DeleteMany(keys); err != nil {
-			common.SysError(fmt.Sprintf(i18n.Translate("svc.channel_affinity_cache_delete_many_failed_err"), err))
+			common.SysError(fmt.Sprintf("channel affinity cache delete many failed: err=%v", err))
 		}
 	}
 	return len(keys)
@@ -613,7 +612,7 @@ func GetPreferredChannelByAffinity(c *gin.Context, modelName string, usingGroup 
 		cache := getChannelAffinityCache()
 		channelID, found, err := cache.Get(cacheKeySuffix)
 		if err != nil {
-			common.SysError(fmt.Sprintf(i18n.Translate("svc.channel_affinity_cache_get_failed_key_err"), cacheKeyFull, err))
+			common.SysError(fmt.Sprintf("channel affinity cache get failed: key=%s, err=%v", cacheKeyFull, err))
 			return 0, false
 		}
 		if found {
@@ -704,7 +703,7 @@ func RecordChannelAffinity(c *gin.Context, channelID int) {
 	}
 	cache := getChannelAffinityCache()
 	if err := cache.SetWithTTL(cacheKey, channelID, time.Duration(ttlSeconds)*time.Second); err != nil {
-		common.SysError(fmt.Sprintf(i18n.Translate("svc.channel_affinity_cache_set_failed_key_err"), cacheKey, err))
+		common.SysError(fmt.Sprintf("channel affinity cache set failed: key=%s, err=%v", cacheKey, err))
 	}
 }
 

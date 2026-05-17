@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -94,7 +93,7 @@ func refreshCodexOAuthToken(
 ) (*CodexOAuthTokenResult, error) {
 	rt := strings.TrimSpace(refreshToken)
 	if rt == "" {
-		return nil, errors.New(i18n.Translate("svc.empty_refresh_token"))
+		return nil, errors.New("empty refresh_token")
 	}
 
 	form := url.Values{}
@@ -125,11 +124,11 @@ func refreshCodexOAuthToken(
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf(i18n.Translate("svc.codex_oauth_refresh_failed_status"), resp.StatusCode)
+		return nil, fmt.Errorf("codex oauth refresh failed: status=%d", resp.StatusCode)
 	}
 
 	if strings.TrimSpace(payload.AccessToken) == "" || strings.TrimSpace(payload.RefreshToken) == "" || payload.ExpiresIn <= 0 {
-		return nil, errors.New(i18n.Translate("svc.codex_oauth_refresh_response_missing_fields"))
+		return nil, errors.New("codex oauth refresh response missing fields")
 	}
 
 	return &CodexOAuthTokenResult{
@@ -151,10 +150,10 @@ func exchangeCodexAuthorizationCode(
 	c := strings.TrimSpace(code)
 	v := strings.TrimSpace(verifier)
 	if c == "" {
-		return nil, errors.New(i18n.Translate("svc.empty_authorization_code"))
+		return nil, errors.New("empty authorization code")
 	}
 	if v == "" {
-		return nil, errors.New(i18n.Translate("svc.empty_code_verifier"))
+		return nil, errors.New("empty code_verifier")
 	}
 
 	form := url.Values{}
@@ -186,10 +185,10 @@ func exchangeCodexAuthorizationCode(
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf(i18n.Translate("svc.codex_oauth_code_exchange_failed_status"), resp.StatusCode)
+		return nil, fmt.Errorf("codex oauth code exchange failed: status=%d", resp.StatusCode)
 	}
 	if strings.TrimSpace(payload.AccessToken) == "" || strings.TrimSpace(payload.RefreshToken) == "" || payload.ExpiresIn <= 0 {
-		return nil, errors.New(i18n.Translate("svc.codex_oauth_token_response_missing_fields"))
+		return nil, errors.New("codex oauth token response missing fields")
 	}
 	return &CodexOAuthTokenResult{
 		AccessToken:  strings.TrimSpace(payload.AccessToken),
@@ -233,7 +232,7 @@ func buildCodexAuthorizeURL(state string, challenge string) (string, error) {
 
 func createStateHex(nBytes int) (string, error) {
 	if nBytes <= 0 {
-		return "", errors.New(i18n.Translate("svc.invalid_state_bytes_length"))
+		return "", errors.New("invalid state bytes length")
 	}
 	b := make([]byte, nBytes)
 	if _, err := rand.Read(b); err != nil {

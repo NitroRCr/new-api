@@ -1,8 +1,6 @@
 package ollama
 
 import (
-	"errors"
-	"github.com/QuantumNous/new-api/i18n"
 	"bufio"
 	"encoding/json"
 	"fmt"
@@ -67,7 +65,7 @@ func toUnix(ts string) int64 {
 
 func ollamaStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.Usage, *types.NewAPIError) {
 	if resp == nil || resp.Body == nil {
-		return nil, types.NewOpenAIError(errors.New(i18n.Translate("relay.empty_response")), types.ErrorCodeBadResponse, http.StatusBadRequest)
+		return nil, types.NewOpenAIError(fmt.Errorf("empty response"), types.ErrorCodeBadResponse, http.StatusBadRequest)
 	}
 	defer service.CloseResponseBodyGracefully(resp)
 

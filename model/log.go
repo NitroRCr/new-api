@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/types"
 
@@ -89,7 +88,7 @@ func RecordLog(userId int, logType int, content string) {
 	}
 	err := LOG_DB.Create(log).Error
 	if err != nil {
-		common.SysLog(i18n.Translate("model.failed_to_record_log") + err.Error())
+		common.SysLog("failed to record log: " + err.Error())
 	}
 }
 
@@ -147,7 +146,7 @@ func RecordTopupLog(userId int, content string, callerIp string, paymentMethod s
 
 func RecordErrorLog(c *gin.Context, userId int, channelId int, modelName string, tokenName string, content string, tokenId int, useTimeSeconds int,
 	isStream bool, group string, other map[string]interface{}) {
-	logger.LogInfo(c, fmt.Sprintf(i18n.Translate("model.record_error_log_userid_channelid_modelname_tokenname"), userId, channelId, modelName, tokenName, content))
+	logger.LogInfo(c, fmt.Sprintf("record error log: userId=%d, channelId=%d, modelName=%s, tokenName=%s, content=%s", userId, channelId, modelName, tokenName, content))
 	username := c.GetString("username")
 	requestId := c.GetString(common.RequestIdKey)
 	upstreamRequestId := c.GetString(common.UpstreamRequestIdKey)
@@ -210,7 +209,7 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	if !common.LogConsumeEnabled {
 		return
 	}
-	logger.LogInfo(c, fmt.Sprintf(i18n.Translate("model.record_consume_log_userid_params"), userId, common.GetJsonString(params)))
+	logger.LogInfo(c, fmt.Sprintf("record consume log: userId=%d, params=%s", userId, common.GetJsonString(params)))
 	username := c.GetString("username")
 	requestId := c.GetString(common.RequestIdKey)
 	upstreamRequestId := c.GetString(common.UpstreamRequestIdKey)
@@ -250,7 +249,7 @@ func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams)
 	}
 	err := LOG_DB.Create(log).Error
 	if err != nil {
-		logger.LogError(c, i18n.Translate("model.failed_to_record_log")+err.Error())
+		logger.LogError(c, "failed to record log: "+err.Error())
 	}
 	if common.DataExportEnabled {
 		gopool.Go(func() {
@@ -298,7 +297,7 @@ func RecordTaskBillingLog(params RecordTaskBillingLogParams) {
 	}
 	err := LOG_DB.Create(log).Error
 	if err != nil {
-		common.SysLog(i18n.Translate("model.failed_to_record_task_billing_log") + err.Error())
+		common.SysLog("failed to record task billing log: " + err.Error())
 	}
 }
 
@@ -412,13 +411,13 @@ func GetUserLogs(userId int, logType int, startTimestamp int64, endTimestamp int
 	}
 	err = tx.Model(&Log{}).Limit(logSearchCountLimit).Count(&total).Error
 	if err != nil {
-		common.SysError(i18n.Translate("model.failed_to_count_user_logs") + err.Error())
-		return nil, 0, errors.New(i18n.Translate("log.query_failed_model"))
+		common.SysError("failed to count user logs: " + err.Error())
+		return nil, 0, errors.New("查询日志失败")
 	}
 	err = tx.Order("logs.id desc").Limit(num).Offset(startIdx).Find(&logs).Error
 	if err != nil {
-		common.SysError(i18n.Translate("model.failed_to_search_user_logs") + err.Error())
-		return nil, 0, errors.New(i18n.Translate("log.query_failed_model"))
+		common.SysError("failed to search user logs: " + err.Error())
+		return nil, 0, errors.New("查询日志失败")
 	}
 
 	formatUserLogs(logs, startIdx)
@@ -484,12 +483,12 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 
 	// 执行查询
 	if err := tx.Scan(&stat).Error; err != nil {
-		common.SysError(i18n.Translate("model.failed_to_query_log_stat") + err.Error())
-		return stat, errors.New(i18n.Translate("log.stats_failed_model"))
+		common.SysError("failed to query log stat: " + err.Error())
+		return stat, errors.New("查询统计数据失败")
 	}
 	if err := rpmTpmQuery.Scan(&stat).Error; err != nil {
-		common.SysError(i18n.Translate("model.failed_to_query_rpm_tpm_stat") + err.Error())
-		return stat, errors.New(i18n.Translate("log.stats_failed_model"))
+		common.SysError("failed to query rpm/tpm stat: " + err.Error())
+		return stat, errors.New("查询统计数据失败")
 	}
 
 	return stat, nil

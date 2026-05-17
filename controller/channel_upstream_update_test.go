@@ -138,7 +138,6 @@ func TestBuildUpstreamModelUpdateTaskNotificationContent_OmitOverflowDetails(t *
 	}
 
 	content := buildUpstreamModelUpdateTaskNotificationContent(
-		"zh-CN",
 		24,
 		12,
 		56,

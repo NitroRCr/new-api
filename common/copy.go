@@ -1,14 +1,14 @@
 package common
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/jinzhu/copier"
 )
 
 func DeepCopy[T any](src *T) (*T, error) {
 	if src == nil {
-		return nil, errors.New(Translate("common.copy_source_cannot_be_nil"))
+		return nil, fmt.Errorf("copy source cannot be nil")
 	}
 	var dst T
 	err := copier.CopyWithOption(&dst, src, copier.Option{DeepCopy: true, IgnoreEmpty: true})

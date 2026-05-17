@@ -1,8 +1,6 @@
 package operation_setting
 
 import (
-	"errors"
-	"github.com/QuantumNous/new-api/common"
 	"fmt"
 	"sort"
 	"strconv"
@@ -142,7 +140,7 @@ func ParseHTTPStatusCodeRanges(input string) ([]StatusCodeRange, error) {
 	}
 
 	if len(invalid) > 0 {
-		return nil, fmt.Errorf(common.Translate("setting.invalid_http_status_code_rules"), strings.Join(invalid, ", "))
+		return nil, fmt.Errorf("invalid http status code rules: %s", strings.Join(invalid, ", "))
 	}
 	if len(ranges) == 0 {
 		return nil, nil
@@ -174,37 +172,37 @@ func parseHTTPStatusCodeToken(token string) (StatusCodeRange, error) {
 	token = strings.TrimSpace(token)
 	token = strings.ReplaceAll(token, " ", "")
 	if token == "" {
-		return StatusCodeRange{}, errors.New(common.Translate("setting.empty_token"))
+		return StatusCodeRange{}, fmt.Errorf("empty token")
 	}
 
 	if strings.Contains(token, "-") {
 		parts := strings.Split(token, "-")
 		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return StatusCodeRange{}, fmt.Errorf(common.Translate("setting.invalid_range_token"), token)
+			return StatusCodeRange{}, fmt.Errorf("invalid range token: %s", token)
 		}
 		start, err := strconv.Atoi(parts[0])
 		if err != nil {
-			return StatusCodeRange{}, fmt.Errorf(common.Translate("setting.invalid_range_start"), token)
+			return StatusCodeRange{}, fmt.Errorf("invalid range start: %s", token)
 		}
 		end, err := strconv.Atoi(parts[1])
 		if err != nil {
-			return StatusCodeRange{}, fmt.Errorf(common.Translate("setting.invalid_range_end"), token)
+			return StatusCodeRange{}, fmt.Errorf("invalid range end: %s", token)
 		}
 		if start > end {
-			return StatusCodeRange{}, fmt.Errorf(common.Translate("setting.range_start_end"), token)
+			return StatusCodeRange{}, fmt.Errorf("range start > end: %s", token)
 		}
 		if start < 100 || end > 599 {
-			return StatusCodeRange{}, fmt.Errorf(common.Translate("setting.range_out_of_bounds"), token)
+			return StatusCodeRange{}, fmt.Errorf("range out of bounds: %s", token)
 		}
 		return StatusCodeRange{Start: start, End: end}, nil
 	}
 
 	code, err := strconv.Atoi(token)
 	if err != nil {
-		return StatusCodeRange{}, fmt.Errorf(common.Translate("setting.invalid_status_code"), token)
+		return StatusCodeRange{}, fmt.Errorf("invalid status code: %s", token)
 	}
 	if code < 100 || code > 599 {
-		return StatusCodeRange{}, fmt.Errorf(common.Translate("setting.status_code_out_of_bounds"), token)
+		return StatusCodeRange{}, fmt.Errorf("status code out of bounds: %s", token)
 	}
 	return StatusCodeRange{Start: code, End: code}, nil
 }

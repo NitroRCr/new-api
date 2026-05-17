@@ -1,7 +1,6 @@
 package baidu
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -120,7 +119,7 @@ func baiduStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
 		var baiduResponse BaiduChatStreamResponse
 		if err := common.Unmarshal([]byte(data), &baiduResponse); err != nil {
-			common.SysLog(i18n.Translate("relay.error_unmarshalling_stream_response") + err.Error())
+			common.SysLog("error unmarshalling stream response: " + err.Error())
 			sr.Error(err)
 			return
 		}
@@ -131,7 +130,7 @@ func baiduStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.
 		}
 		response := streamResponseBaidu2OpenAI(&baiduResponse)
 		if err := helper.ObjectData(c, response); err != nil {
-			common.SysLog(i18n.Translate("relay.error_sending_stream_response") + err.Error())
+			common.SysLog("error sending stream response: " + err.Error())
 			sr.Error(err)
 		}
 	})
@@ -207,7 +206,7 @@ func getBaiduAccessToken(apiKey string) (string, error) {
 		return "", err
 	}
 	if accessToken == nil {
-		return "", errors.New(i18n.Translate("relay.getbaiduaccesstoken_return_a_nil_token"))
+		return "", errors.New("getBaiduAccessToken return a nil token")
 	}
 	return (*accessToken).AccessToken, nil
 }
@@ -215,7 +214,7 @@ func getBaiduAccessToken(apiKey string) (string, error) {
 func getBaiduAccessTokenHelper(apiKey string) (*BaiduAccessToken, error) {
 	parts := strings.Split(apiKey, "|")
 	if len(parts) != 2 {
-		return nil, errors.New(i18n.Translate("relay.invalid_baidu_apikey"))
+		return nil, errors.New("invalid baidu apikey")
 	}
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=%s&client_secret=%s",
 		parts[0], parts[1]), nil)
@@ -239,7 +238,7 @@ func getBaiduAccessTokenHelper(apiKey string) (*BaiduAccessToken, error) {
 		return nil, errors.New(accessToken.Error + ": " + accessToken.ErrorDescription)
 	}
 	if accessToken.AccessToken == "" {
-		return nil, errors.New(i18n.Translate("relay.getbaiduaccesstokenhelper_get_empty_access_token"))
+		return nil, errors.New("getBaiduAccessTokenHelper get empty access token")
 	}
 	accessToken.ExpiresAt = time.Now().Add(time.Duration(accessToken.ExpiresIn) * time.Second)
 	baiduTokenStore.Store(apiKey, accessToken)

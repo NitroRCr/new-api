@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"errors"
 	"fmt"
 	"net/http"
@@ -18,7 +17,7 @@ import (
 func FlushWriter(c *gin.Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf(i18n.Translate("relay.flush_panic_recovered"), r)
+			err = fmt.Errorf("flush panic recovered: %v", r)
 		}
 	}()
 
@@ -27,12 +26,12 @@ func FlushWriter(c *gin.Context) (err error) {
 	}
 
 	if c.Request != nil && c.Request.Context().Err() != nil {
-		return fmt.Errorf(i18n.Translate("relay.request_context_done"), c.Request.Context().Err())
+		return fmt.Errorf("request context done: %w", c.Request.Context().Err())
 	}
 
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		return errors.New(i18n.Translate("relay.streaming_error_flusher_not_found"))
+		return errors.New("streaming error: flusher not found")
 	}
 
 	flusher.Flush()
@@ -58,7 +57,7 @@ func SetEventStreamHeaders(c *gin.Context) {
 func ClaudeData(c *gin.Context, resp dto.ClaudeResponse) error {
 	jsonData, err := common.Marshal(resp)
 	if err != nil {
-		common.SysError(i18n.Translate("relay.error_marshalling_stream_response") + err.Error())
+		common.SysError("error marshalling stream response: " + err.Error())
 	} else {
 		c.Render(-1, common.CustomEvent{Data: fmt.Sprintf("event: %s\n", resp.Type)})
 		c.Render(-1, common.CustomEvent{Data: "data: " + string(jsonData)})
@@ -81,11 +80,11 @@ func ResponseChunkData(c *gin.Context, resp dto.ResponsesStreamResponse, data st
 
 func StringData(c *gin.Context, str string) error {
 	if c == nil || c.Writer == nil {
-		return errors.New(i18n.Translate("relay.context_or_writer_is_nil"))
+		return errors.New("context or writer is nil")
 	}
 
 	if c.Request != nil && c.Request.Context().Err() != nil {
-		return fmt.Errorf(i18n.Translate("relay.request_context_done"), c.Request.Context().Err())
+		return fmt.Errorf("request context done: %w", c.Request.Context().Err())
 	}
 
 	c.Render(-1, common.CustomEvent{Data: "data: " + str})
@@ -94,26 +93,26 @@ func StringData(c *gin.Context, str string) error {
 
 func PingData(c *gin.Context) error {
 	if c == nil || c.Writer == nil {
-		return errors.New(i18n.Translate("relay.context_or_writer_is_nil"))
+		return errors.New("context or writer is nil")
 	}
 
 	if c.Request != nil && c.Request.Context().Err() != nil {
-		return fmt.Errorf(i18n.Translate("relay.request_context_done"), c.Request.Context().Err())
+		return fmt.Errorf("request context done: %w", c.Request.Context().Err())
 	}
 
 	if _, err := c.Writer.Write([]byte(": PING\n\n")); err != nil {
-		return fmt.Errorf(i18n.Translate("relay.write_ping_data_failed"), err)
+		return fmt.Errorf("write ping data failed: %w", err)
 	}
 	return FlushWriter(c)
 }
 
 func ObjectData(c *gin.Context, object interface{}) error {
 	if object == nil {
-		return errors.New(i18n.Translate("relay.object_is_nil"))
+		return errors.New("object is nil")
 	}
 	jsonData, err := common.Marshal(object)
 	if err != nil {
-		return fmt.Errorf(i18n.Translate("relay.error_marshalling_object"), err)
+		return fmt.Errorf("error marshalling object: %w", err)
 	}
 	return StringData(c, string(jsonData))
 }
@@ -124,8 +123,8 @@ func Done(c *gin.Context) {
 
 func WssString(c *gin.Context, ws *websocket.Conn, str string) error {
 	if ws == nil {
-		logger.LogError(c, i18n.Translate("relay.websocket_connection_is_nil"))
-		return errors.New(i18n.Translate("relay.websocket_connection_is_nil_bc97"))
+		logger.LogError(c, "websocket connection is nil")
+		return errors.New("websocket connection is nil")
 	}
 	//common.LogInfo(c, fmt.Sprintf("sending message: %s", str))
 	return ws.WriteMessage(1, []byte(str))
@@ -134,11 +133,11 @@ func WssString(c *gin.Context, ws *websocket.Conn, str string) error {
 func WssObject(c *gin.Context, ws *websocket.Conn, object interface{}) error {
 	jsonData, err := common.Marshal(object)
 	if err != nil {
-		return fmt.Errorf(i18n.Translate("relay.error_marshalling_object"), err)
+		return fmt.Errorf("error marshalling object: %w", err)
 	}
 	if ws == nil {
-		logger.LogError(c, i18n.Translate("relay.websocket_connection_is_nil"))
-		return errors.New(i18n.Translate("relay.websocket_connection_is_nil_bc97"))
+		logger.LogError(c, "websocket connection is nil")
+		return errors.New("websocket connection is nil")
 	}
 	//common.LogInfo(c, fmt.Sprintf("sending message: %s", jsonData))
 	return ws.WriteMessage(1, jsonData)

@@ -85,7 +85,7 @@ func CreateModelMeta(c *gin.Context) {
 		return
 	}
 	if m.ModelName == "" {
-		common.ApiErrorI18n(c, "model.name_empty")
+		common.ApiErrorMsg(c, "模型名称不能为空")
 		return
 	}
 	// 名称冲突检查
@@ -93,7 +93,7 @@ func CreateModelMeta(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	} else if dup {
-		common.ApiErrorI18n(c, "model.name_exists")
+		common.ApiErrorMsg(c, "模型名称已存在")
 		return
 	}
 
@@ -115,7 +115,7 @@ func UpdateModelMeta(c *gin.Context) {
 		return
 	}
 	if m.Id == 0 {
-		common.ApiErrorI18n(c, "model.id_missing")
+		common.ApiErrorMsg(c, "缺少模型 ID")
 		return
 	}
 
@@ -131,7 +131,7 @@ func UpdateModelMeta(c *gin.Context) {
 			common.ApiError(c, err)
 			return
 		} else if dup {
-			common.ApiErrorI18n(c, "model.name_exists")
+			common.ApiErrorMsg(c, "模型名称已存在")
 			return
 		}
 

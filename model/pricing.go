@@ -1,7 +1,6 @@
 package model
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -112,7 +111,7 @@ func updatePricing() {
 	//modelRatios := common.GetModelRatios()
 	enableAbilities, err := GetAllEnableAbilityWithChannels()
 	if err != nil {
-		common.SysLog(fmt.Sprintf(i18n.Translate("model.getallenableabilitywithchannels_error"), err))
+		common.SysLog(fmt.Sprintf("GetAllEnableAbilityWithChannels error: %v", err))
 		return
 	}
 	// 预加载模型元数据与供应商一次，避免循环查询

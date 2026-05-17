@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"errors"
-	"github.com/QuantumNous/new-api/i18n"
 	"fmt"
 	"io"
 	"strconv"
@@ -16,7 +14,7 @@ import (
 
 func getGeminiVideoURL(channel *model.Channel, task *model.Task, apiKey string) (string, error) {
 	if channel == nil || task == nil {
-		return "", errors.New(i18n.Translate("ctrl.invalid_channel_or_task"))
+		return "", fmt.Errorf("invalid channel or task")
 	}
 
 	if url := extractGeminiVideoURLFromTaskData(task); url != "" {
@@ -30,11 +28,11 @@ func getGeminiVideoURL(channel *model.Channel, task *model.Task, apiKey string) 
 
 	adaptor := relay.GetTaskAdaptor(constant.TaskPlatform(strconv.Itoa(channel.Type)))
 	if adaptor == nil {
-		return "", errors.New(i18n.Translate("ctrl.gemini_task_adaptor_not_found"))
+		return "", fmt.Errorf("gemini task adaptor not found")
 	}
 
 	if apiKey == "" {
-		return "", errors.New(i18n.Translate("ctrl.api_key_not_available_for_task"))
+		return "", fmt.Errorf("api key not available for task")
 	}
 
 	proxy := channel.GetSetting().Proxy
@@ -43,13 +41,13 @@ func getGeminiVideoURL(channel *model.Channel, task *model.Task, apiKey string) 
 		"action":  task.Action,
 	}, proxy)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Translate("ctrl.fetch_task_failed"), err)
+		return "", fmt.Errorf("fetch task failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Translate("ctrl.read_task_response_failed"), err)
+		return "", fmt.Errorf("read task response failed: %w", err)
 	}
 
 	taskInfo, parseErr := adaptor.ParseTaskResult(body)
@@ -62,10 +60,10 @@ func getGeminiVideoURL(channel *model.Channel, task *model.Task, apiKey string) 
 	}
 
 	if parseErr != nil {
-		return "", fmt.Errorf(i18n.Translate("ctrl.parse_task_result_failed"), parseErr)
+		return "", fmt.Errorf("parse task result failed: %w", parseErr)
 	}
 
-	return "", errors.New(i18n.Translate("ctrl.gemini_video_url_not_found"))
+	return "", fmt.Errorf("gemini video url not found")
 }
 
 func extractGeminiVideoURLFromTaskData(task *model.Task) string {
@@ -149,7 +147,7 @@ func extractGeminiVideoURLFromGeneratedSamples(gvr map[string]any) string {
 
 func getVertexVideoURL(channel *model.Channel, task *model.Task) (string, error) {
 	if channel == nil || task == nil {
-		return "", errors.New(i18n.Translate("ctrl.invalid_channel_or_task"))
+		return "", fmt.Errorf("invalid channel or task")
 	}
 	if url := strings.TrimSpace(task.GetResultURL()); url != "" && !isTaskProxyContentURL(url, task.TaskID) {
 		return url, nil
@@ -165,12 +163,12 @@ func getVertexVideoURL(channel *model.Channel, task *model.Task) (string, error)
 
 	adaptor := relay.GetTaskAdaptor(constant.TaskPlatform(strconv.Itoa(channel.Type)))
 	if adaptor == nil {
-		return "", errors.New(i18n.Translate("ctrl.vertex_task_adaptor_not_found"))
+		return "", fmt.Errorf("vertex task adaptor not found")
 	}
 
 	key := getVertexTaskKey(channel, task)
 	if key == "" {
-		return "", errors.New(i18n.Translate("ctrl.vertex_key_not_available_for_task"))
+		return "", fmt.Errorf("vertex key not available for task")
 	}
 
 	resp, err := adaptor.FetchTask(baseURL, key, map[string]any{
@@ -178,13 +176,13 @@ func getVertexVideoURL(channel *model.Channel, task *model.Task) (string, error)
 		"action":  task.Action,
 	}, channel.GetSetting().Proxy)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Translate("ctrl.fetch_task_failed"), err)
+		return "", fmt.Errorf("fetch task failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Translate("ctrl.read_task_response_failed"), err)
+		return "", fmt.Errorf("read task response failed: %w", err)
 	}
 
 	taskInfo, parseErr := adaptor.ParseTaskResult(body)
@@ -195,9 +193,9 @@ func getVertexVideoURL(channel *model.Channel, task *model.Task) (string, error)
 		return url, nil
 	}
 	if parseErr != nil {
-		return "", fmt.Errorf(i18n.Translate("ctrl.parse_task_result_failed"), parseErr)
+		return "", fmt.Errorf("parse task result failed: %w", parseErr)
 	}
-	return "", errors.New(i18n.Translate("ctrl.vertex_video_url_not_found"))
+	return "", fmt.Errorf("vertex video url not found")
 }
 
 func isTaskProxyContentURL(url string, taskID string) bool {
@@ -290,7 +288,7 @@ func ensureAPIKey(uri, key string) string {
 		return uri
 	}
 	if strings.Contains(uri, "?") {
-		return fmt.Sprintf(i18n.Translate("ctrl.key"), uri, key)
+		return fmt.Sprintf("%s&key=%s", uri, key)
 	}
 	return fmt.Sprintf("%s?key=%s", uri, key)
 }

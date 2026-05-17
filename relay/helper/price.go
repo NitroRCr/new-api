@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
@@ -46,7 +45,7 @@ func HandleGroupRatio(ctx *gin.Context, relayInfo *relaycommon.RelayInfo) types.
 	// check auto group
 	autoGroup, exists := ctx.Get("auto_group")
 	if exists {
-		logger.LogDebug(ctx, fmt.Sprintf(i18n.Translate("relay.final_group"), autoGroup))
+		logger.LogDebug(ctx, fmt.Sprintf("final group: %s", autoGroup))
 		relayInfo.UsingGroup = autoGroup.(string)
 	}
 
@@ -158,7 +157,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 	}
 
 	if common.DebugEnabled {
-		println(fmt.Sprintf(i18n.Translate("relay.model_price_helper_result"), priceData.ToSetting()))
+		println(fmt.Sprintf("model_price_helper result: %s", priceData.ToSetting()))
 	}
 	info.PriceData = priceData
 	return priceData, nil

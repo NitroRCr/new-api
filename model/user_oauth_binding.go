@@ -1,7 +1,6 @@
 package model
 
 import (
-	"github.com/QuantumNous/new-api/i18n"
 	"errors"
 	"time"
 
@@ -64,18 +63,18 @@ func IsProviderUserIdTaken(providerId int, providerUserId string) bool {
 // CreateUserOAuthBinding creates a new OAuth binding
 func CreateUserOAuthBinding(binding *UserOAuthBinding) error {
 	if binding.UserId == 0 {
-		return errors.New(i18n.Translate("model.user_id_is_required"))
+		return errors.New("user ID is required")
 	}
 	if binding.ProviderId == 0 {
-		return errors.New(i18n.Translate("model.provider_id_is_required"))
+		return errors.New("provider ID is required")
 	}
 	if binding.ProviderUserId == "" {
-		return errors.New(i18n.Translate("model.provider_user_id_is_required"))
+		return errors.New("provider user ID is required")
 	}
 
 	// Check if this provider user ID is already taken
 	if IsProviderUserIdTaken(binding.ProviderId, binding.ProviderUserId) {
-		return errors.New(i18n.Translate("model.this_oauth_account_is_already_bound_to_another"))
+		return errors.New("this OAuth account is already bound to another user")
 	}
 
 	binding.CreatedAt = time.Now()
@@ -85,20 +84,20 @@ func CreateUserOAuthBinding(binding *UserOAuthBinding) error {
 // CreateUserOAuthBindingWithTx creates a new OAuth binding within a transaction
 func CreateUserOAuthBindingWithTx(tx *gorm.DB, binding *UserOAuthBinding) error {
 	if binding.UserId == 0 {
-		return errors.New(i18n.Translate("model.user_id_is_required"))
+		return errors.New("user ID is required")
 	}
 	if binding.ProviderId == 0 {
-		return errors.New(i18n.Translate("model.provider_id_is_required"))
+		return errors.New("provider ID is required")
 	}
 	if binding.ProviderUserId == "" {
-		return errors.New(i18n.Translate("model.provider_user_id_is_required"))
+		return errors.New("provider user ID is required")
 	}
 
 	// Check if this provider user ID is already taken (use tx to check within the same transaction)
 	var count int64
 	tx.Model(&UserOAuthBinding{}).Where("provider_id = ? AND provider_user_id = ?", binding.ProviderId, binding.ProviderUserId).Count(&count)
 	if count > 0 {
-		return errors.New(i18n.Translate("model.this_oauth_account_is_already_bound_to_another"))
+		return errors.New("this OAuth account is already bound to another user")
 	}
 
 	binding.CreatedAt = time.Now()
@@ -111,7 +110,7 @@ func UpdateUserOAuthBinding(userId, providerId int, newProviderUserId string) er
 	var existingBinding UserOAuthBinding
 	err := DB.Where("provider_id = ? AND provider_user_id = ?", providerId, newProviderUserId).First(&existingBinding).Error
 	if err == nil && existingBinding.UserId != userId {
-		return errors.New(i18n.Translate("model.this_oauth_account_is_already_bound_to_another"))
+		return errors.New("this OAuth account is already bound to another user")
 	}
 
 	// Check if user already has a binding for this provider

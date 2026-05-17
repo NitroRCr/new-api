@@ -1,8 +1,6 @@
 package model
 
 import (
-	"errors"
-	"github.com/QuantumNous/new-api/i18n"
 	"fmt"
 	"time"
 
@@ -40,7 +38,7 @@ func (user *UserBase) GetSetting() dto.UserSetting {
 	if user.Setting != "" {
 		err := common.Unmarshal([]byte(user.Setting), &setting)
 		if err != nil {
-			common.SysLog(i18n.Translate("model.failed_to_unmarshal_setting") + err.Error())
+			common.SysLog("failed to unmarshal setting: " + err.Error())
 		}
 	}
 	return setting
@@ -87,7 +85,7 @@ func GetUserCache(userId int) (userCache *UserBase, err error) {
 		if shouldUpdateRedis(fromDB, err) && user != nil {
 			gopool.Go(func() {
 				if err := updateUserCache(*user); err != nil {
-					common.SysLog(i18n.Translate("model.failed_to_update_user_status_cache") + err.Error())
+					common.SysLog("failed to update user status cache: " + err.Error())
 				}
 			})
 		}
@@ -122,7 +120,7 @@ func GetUserCache(userId int) (userCache *UserBase, err error) {
 
 func cacheGetUserBase(userId int) (*UserBase, error) {
 	if !common.RedisEnabled {
-		return nil, errors.New(i18n.Translate("model.redis_is_not_enabled"))
+		return nil, fmt.Errorf("redis is not enabled")
 	}
 	var userCache UserBase
 	// Try getting from Redis first
