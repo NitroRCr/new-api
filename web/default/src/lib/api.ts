@@ -73,7 +73,7 @@ api.get = ((url: string, config = {}) => {
 api.interceptors.response.use(
   (response) => {
     // ---- Google Analytics 4 (GA4) Tracking ----
-    if (typeof window !== 'undefined' && (window as any).gtag && response.data?.success) {
+    if (typeof window !== 'undefined' && (window as any).gtag && response.status >= 200 && response.status < 300) {
       const url = response.config.url
       const method = response.config.method?.toLowerCase()
 
