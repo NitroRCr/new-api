@@ -72,6 +72,46 @@ api.get = ((url: string, config = {}) => {
 // Handle business logic errors and HTTP errors globally
 api.interceptors.response.use(
   (response) => {
+    // ---- Google Analytics 4 (GA4) Tracking ----
+    if (typeof window !== 'undefined' && (window as any).gtag && response.data?.success) {
+      const url = response.config.url
+      const method = response.config.method?.toLowerCase()
+
+      // 1. Registration success
+      if (method === 'post' && url === '/api/user/register') {
+        ;(window as any).gtag('event', 'sign_up')
+      }
+
+      // 2. Create API Key success
+      if (method === 'post' && url === '/api/token/') {
+        ;(window as any).gtag('event', 'create_api_key')
+      }
+
+      // 3. Initiate topup (Stripe, EPay, Waffo, etc.)
+      if (
+        method === 'post' &&
+        (url === '/api/user/pay' ||
+          url === '/api/user/stripe/pay' ||
+          url === '/api/user/epay/pay' ||
+          url === '/api/user/waffo/pay')
+      ) {
+        let amount = 0
+        try {
+          if (response.config.data) {
+            const parsed = JSON.parse(response.config.data)
+            amount = parsed.amount || 0
+          }
+        } catch (e) {
+          // ignore JSON parse error
+        }
+        ;(window as any).gtag('event', 'begin_checkout', {
+          value: amount,
+          currency: 'USD',
+        })
+      }
+    }
+    // -------------------------------------------
+
     const skipBusiness = (response.config as unknown as Record<string, unknown>)
       ?.skipBusinessError
 
