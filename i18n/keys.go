@@ -320,6 +320,30 @@ const (
 	MsgDistributorInvalidParseModel       = "distributor.invalid_request_parse_model"
 )
 
+// Email notification messages
+const (
+	MsgEmailVerificationSubject = "email.verification_subject"
+	MsgEmailVerificationBody    = "email.verification_body"
+	MsgEmailResetSubject        = "email.reset_subject"
+	MsgEmailResetBody           = "email.reset_body"
+	MsgEmailInvalidEmail        = "email.invalid_email"
+	MsgEmailAlreadyTaken        = "email.already_taken"
+	MsgEmailAliasRestricted     = "email.alias_restricted"
+	MsgEmailDomainNotAllowed    = "email.domain_not_allowed"
+)
+
+// Notification content messages
+const (
+	MsgNotifyQuotaLowTitle           = "notify.quota_low_title"
+	MsgNotifyQuotaLowEmail           = "notify.quota_low_email"
+	MsgNotifyQuotaLowBark            = "notify.quota_low_bark"
+	MsgNotifyQuotaLowGotify          = "notify.quota_low_gotify"
+	MsgNotifySubQuotaLowTitle        = "notify.sub_quota_low_title"
+	MsgNotifyChannelDisabledSubject  = "notify.channel_disabled_subject"
+	MsgNotifyChannelDisabledContent  = "notify.channel_disabled_content"
+	MsgNotifyChannelEnabledSubject   = "notify.channel_enabled_subject"
+)
+
 // Custom OAuth provider related messages
 const (
 	MsgCustomOAuthNotFound          = "custom_oauth.not_found"

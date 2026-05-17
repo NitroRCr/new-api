@@ -270,6 +270,26 @@ distributor.no_available_channel: "分组 {{.Group}} 下模型 {{.Model}} 无可
 distributor.invalid_midjourney_request: "无效的midjourney请求，{{.Error}}"
 distributor.invalid_request_parse_model: "无效的请求，无法解析模型"
 
+# Email notification messages
+email.verification_subject: "{{.SystemName}}邮箱验证邮件"
+email.verification_body: "<p>您好，你正在进行{{.SystemName}}邮箱验证。</p><p>您的验证码为: <strong>{{.Code}}</strong></p><p>验证码 {{.Minutes}} 分钟内有效，如果不是本人操作，请忽略。</p>"
+email.reset_subject: "{{.SystemName}}密码重置"
+email.reset_body: "<p>您好，你正在进行{{.SystemName}}密码重置。</p><p>点击 <a href='{{.Link}}'>此处</a> 进行密码重置。</p><p>如果链接无法点击，请尝试点击下面的链接或将其复制到浏览器中打开：<br> {{.Link}} </p><p>重置链接 {{.Minutes}} 分钟内有效，如果不是本人操作，请忽略。</p>"
+email.invalid_email: "无效的邮箱地址"
+email.already_taken: "邮箱地址已被占用"
+email.alias_restricted: "管理员已启用邮箱地址别名限制，您的邮箱地址由于包含特殊符号而被拒绝。"
+email.domain_not_allowed: "管理员已启用邮箱域名白名单，您的邮箱地址由于包含特殊符号或不在白名单中而被拒绝。"
+
+# Notification content messages
+notify.quota_low_title: "您的额度即将用尽"
+notify.quota_low_email: "{{.Prompt}}，当前剩余额度为 {{.Quota}}，为了不影响您的使用，请及时充值。<br/>充值链接：<a href='{{.Link}}'>{{.Link}}</a>"
+notify.quota_low_bark: "{{.Prompt}}，剩余额度：{{.Quota}}，请及时充值"
+notify.quota_low_gotify: "{{.Prompt}}，当前剩余额度为 {{.Quota}}，请及时充值。"
+notify.sub_quota_low_title: "您的订阅额度即将用尽"
+notify.channel_disabled_subject: "通道「{{.Name}}」（#{{.Id}}）已被禁用"
+notify.channel_disabled_content: "通道「{{.Name}}」（#{{.Id}}）已被禁用，原因：{{.Reason}}"
+notify.channel_enabled_subject: "通道「{{.Name}}」（#{{.Id}}）已被启用"
+
 # Custom OAuth provider messages
 custom_oauth.not_found: "自定义 OAuth 提供商不存在"
 custom_oauth.slug_empty: "标识符不能为空"
