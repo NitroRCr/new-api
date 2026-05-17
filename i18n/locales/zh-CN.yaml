@@ -278,3 +278,9 @@ custom_oauth.name_empty: "æä¾›å•†åç§°ä¸èƒ½ä¸ºç©º"
 custom_oauth.has_bindings: "æ— æ³•åˆ é™¤å·²æœ‰ç”¨æˆ·ç»‘å®šçš„æä¾›å•†"
 custom_oauth.binding_not_found: "OAuth ç»‘å®šä¸å­˜åœ¨"
 custom_oauth.provider_id_field_invalid: "æ— æ³•ä»æä¾›å•†å“åº”ä¸­æå–ç”¨æˆ· ID"
+
+email.verify.subject: "{{.SystemName}}ÓÊÏäÑéÖ¤ÓÊ¼ş"
+email.verify.content: "<p>ÄúºÃ£¬ÄãÕıÔÚ½øĞĞ{{.SystemName}}ÓÊÏäÑéÖ¤¡£</p><p>ÄúµÄÑéÖ¤ÂëÎª: <strong>{{.Code}}</strong></p><p>ÑéÖ¤Âë {{.Minutes}} ·ÖÖÓÄÚÓĞĞ§£¬Èç¹û²»ÊÇ±¾ÈË²Ù×÷£¬ÇëºöÂÔ¡£</p>"
+email.reset.subject: "{{.SystemName}}ÃÜÂëÖØÖÃ"
+email.reset.content: "<p>ÄúºÃ£¬ÄãÕıÔÚ½øĞĞ{{.SystemName}}ÃÜÂëÖØÖÃ¡£</p><p>µã»÷ <a href='{{.Link}}'>´Ë´¦</a> ½øĞĞÃÜÂëÖØÖÃ¡£</p><p>Èç¹ûÁ´½ÓÎŞ·¨µã»÷£¬Çë³¢ÊÔµã»÷ÏÂÃæµÄÁ´½Ó»ò½«Æä¸´ÖÆµ½ä¯ÀÀÆ÷ÖĞ´ò¿ª£º<br> {{.Link}} </p><p>ÖØÖÃÁ´½Ó {{.Minutes}} ·ÖÖÓÄÚÓĞĞ§£¬Èç¹û²»ÊÇ±¾ÈË²Ù×÷£¬ÇëºöÂÔ¡£</p>"
+
