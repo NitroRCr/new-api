@@ -227,8 +227,6 @@ export function RechargeFormCard({
                         1.0
                       const {
                         displayValue,
-                        actualPrice,
-                        savedAmount,
                         hasDiscount,
                       } = calculatePresetPricing(
                         preset.value,
