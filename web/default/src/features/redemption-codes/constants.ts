@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { type TFunction } from 'i18next'
+
 import { type StatusBadgeProps } from '@/components/status-badge'
 
 // ============================================================================
@@ -36,7 +37,7 @@ export const REDEMPTION_STATUS_VALUES = Object.values(REDEMPTION_STATUS).map(
 // labelKey values are i18n keys; use t(config.labelKey) in components
 export const REDEMPTION_STATUSES: Record<
   number,
-  Pick<StatusBadgeProps, 'variant' | 'showDot'> & {
+  Pick<StatusBadgeProps, 'variant'> & {
     labelKey: string
     value: number
   }
@@ -45,19 +46,16 @@ export const REDEMPTION_STATUSES: Record<
     labelKey: 'Unused',
     variant: 'success',
     value: REDEMPTION_STATUS.ENABLED,
-    showDot: true,
   },
   [REDEMPTION_STATUS.DISABLED]: {
     labelKey: 'Disabled',
     variant: 'neutral',
     value: REDEMPTION_STATUS.DISABLED,
-    showDot: true,
   },
   [REDEMPTION_STATUS.USED]: {
     labelKey: 'Used',
     variant: 'neutral',
     value: REDEMPTION_STATUS.USED,
-    showDot: true,
   },
 } as const
 

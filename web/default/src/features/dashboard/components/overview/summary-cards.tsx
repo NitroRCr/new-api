@@ -16,27 +16,24 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import {
-  ArrowRight,
-  Flame,
-  ShieldCheck,
-  TrendingDown,
-} from 'lucide-react'
+import { ArrowRight, Flame, ShieldCheck, TrendingDown } from 'lucide-react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore } from '@/stores/auth-store'
+
+import { StaggerContainer, StaggerItem } from '@/components/page-transition'
+import { Button } from '@/components/ui/button'
+import { getUserQuotaDates } from '@/features/dashboard/api'
+import { useSummaryCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
+import type { QuotaDataItem } from '@/features/dashboard/types'
+import { useStatus } from '@/hooks/use-status'
 import { getCurrencyLabel, isCurrencyDisplayEnabled } from '@/lib/currency'
 import { formatNumber, formatQuota } from '@/lib/format'
 import { computeTimeRange } from '@/lib/time'
 import { cn } from '@/lib/utils'
-import { useStatus } from '@/hooks/use-status'
-import { Button } from '@/components/ui/button'
-import { StaggerContainer, StaggerItem } from '@/components/page-transition'
-import { getUserQuotaDates } from '@/features/dashboard/api'
-import { useSummaryCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
-import type { QuotaDataItem } from '@/features/dashboard/types'
+import { useAuthStore } from '@/stores/auth-store'
+
 import { StatCard } from '../ui/stat-card'
 
 const SUMMARY_SPARKLINE_BUCKETS = 12
@@ -102,7 +99,10 @@ function getSummarySparkline(
   return undefined
 }
 
-function getRunwayDays(remainQuota: number, recentUsage: number): number | null {
+function getRunwayDays(
+  remainQuota: number,
+  recentUsage: number
+): number | null {
   if (remainQuota <= 0 || recentUsage <= 0) return null
   const days = remainQuota / recentUsage
   if (!Number.isFinite(days)) return null
@@ -111,10 +111,7 @@ function getRunwayDays(remainQuota: number, recentUsage: number): number | null 
 
 type HealthLevel = 'healthy' | 'caution' | 'critical'
 
-function getHealthLevel(
-  remainQuota: number,
-  recentUsage: number
-): HealthLevel {
+function getHealthLevel(remainQuota: number, recentUsage: number): HealthLevel {
   if (remainQuota <= 0) return 'critical'
   const days = getRunwayDays(remainQuota, recentUsage)
   if (days !== null && days < 3) return 'caution'
@@ -138,7 +135,6 @@ const HEALTH_CONFIG: Record<
     labelKey: 'Balance depleted',
   },
 }
-
 
 export function SummaryCards() {
   const { t } = useTranslation()
@@ -341,10 +337,7 @@ export function SummaryCards() {
             </div>
           </div>
 
-          <Button
-            className='justify-between'
-            render={<Link to='/wallet' />}
-          >
+          <Button className='justify-between' render={<Link to='/wallet' />}>
             <span>{t('Wallet')}</span>
             <ArrowRight data-icon='inline-end' />
           </Button>

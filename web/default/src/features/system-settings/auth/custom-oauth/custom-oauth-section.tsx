@@ -18,6 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import { SettingsSection } from '../../components/settings-section'
 import { ProviderFormDialog } from './components/provider-form-dialog'
 import { ProviderTable } from './components/provider-table'
@@ -50,12 +51,7 @@ export function CustomOAuthSection() {
 
   if (isLoading) {
     return (
-      <SettingsSection
-        title={t('Custom OAuth Providers')}
-        description={t(
-          'Configure custom OAuth providers for user authentication'
-        )}
-      >
+      <SettingsSection title={t('Custom OAuth Providers')}>
         <div className='text-muted-foreground py-8 text-center text-sm'>
           {t('Loading...')}
         </div>
@@ -64,12 +60,7 @@ export function CustomOAuthSection() {
   }
 
   return (
-    <SettingsSection
-      title={t('Custom OAuth Providers')}
-      description={t(
-        'Configure custom OAuth providers for user authentication'
-      )}
-    >
+    <SettingsSection title={t('Custom OAuth Providers')}>
       <ProviderTable
         providers={providers}
         onEdit={handleEdit}
