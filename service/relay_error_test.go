@@ -12,6 +12,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
+	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
 	kitdto "github.com/QuantumNous/new-api/relaykit/dto"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -65,6 +66,7 @@ func TestProcessChannelErrorMasksDisableReasonAndNotification(t *testing.T) {
 	previousClient, previousWorker := httpClient, system_setting.WorkerUrl
 	fetch := system_setting.GetFetchSetting()
 	previousFetch := *fetch
+	require.NoError(t, i18n.Init())
 	t.Cleanup(func() {
 		model.DB = previousDB
 		common.SetMainDatabaseType(previousType)

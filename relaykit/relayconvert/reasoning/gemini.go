@@ -217,7 +217,8 @@ func geminiDefaultEffort(model string) Effort {
 	switch {
 	case model == "gemini-flash-latest",
 		strings.HasPrefix(model, "gemini-3.5-flash") && !strings.HasPrefix(model, "gemini-3.5-flash-lite"),
-		strings.HasPrefix(model, "gemini-3.6-flash"):
+		strings.HasPrefix(model, "gemini-3.6-flash"),
+		isGeminiFlashWithoutMinimal(model):
 		return EffortMedium
 	case model == "gemini-flash-lite-latest",
 		strings.HasPrefix(model, "gemini-3.5-flash-lite"),
@@ -503,7 +504,8 @@ func geminiLevelForEffort(model string, effort Effort) (string, error) {
 			return string(EffortLow), nil
 		}
 		return string(EffortHigh), nil
-	case strings.HasPrefix(model, "gemini-3.1-pro"), model == "gemini-pro-latest":
+	case strings.HasPrefix(model, "gemini-3.1-pro"), model == "gemini-pro-latest",
+		model == "gemini-flash-latest", isGeminiFlashWithoutMinimal(model):
 		if effort == EffortMinimal {
 			return string(EffortLow), nil
 		}
@@ -518,6 +520,18 @@ func geminiLevelForEffort(model string, effort Effort) (string, error) {
 	default:
 		return "", fmt.Errorf("%w %q for model %q", ErrUnsupportedEffort, effort, model)
 	}
+}
+
+// isGeminiFlashWithoutMinimal reports Gemini Flash generations that reject
+// thinkingLevel "minimal" (3.7 and 3.8 accept only low, medium, and high).
+// https://ai.google.dev/gemini-api/docs/generate-content/thinking
+func isGeminiFlashWithoutMinimal(model string) bool {
+	for _, prefix := range []string{"gemini-3.7-flash", "gemini-3.8-flash"} {
+		if strings.HasPrefix(model, prefix) && !strings.HasPrefix(model, prefix+"-lite") {
+			return true
+		}
+	}
+	return false
 }
 
 func clampGeminiBudget(budget int, capabilities geminiCapabilities) int {
