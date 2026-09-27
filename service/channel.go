@@ -5,15 +5,24 @@ import (
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/QuantumNous/new-api/relaykit/types"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
-	"github.com/QuantumNous/new-api/types"
 )
 
 func formatNotifyType(channelId int, status int) string {
 	return fmt.Sprintf("%s_%d_%d", dto.NotifyTypeChannelUpdate, channelId, status)
+}
+
+func shouldCloseActiveWebSocketsAfterDisable(channelId int) bool {
+	channel, err := model.GetChannelById(channelId, true)
+	if err != nil {
+		common.SysLog(fmt.Sprintf("failed to check channel status before closing active websockets: channel_id=%d, error=%v", channelId, err))
+		return true
+	}
+	return channel.Status != common.ChannelStatusEnabled
 }
 
 // disable & notify
@@ -28,6 +37,9 @@ func DisableChannel(channelError types.ChannelError, reason string) {
 
 	success := model.UpdateChannelStatus(channelError.ChannelId, channelError.UsingKey, common.ChannelStatusAutoDisabled, reason)
 	if success {
+		if shouldCloseActiveWebSocketsAfterDisable(channelError.ChannelId) {
+			CloseActiveWebSocketsForChannel(channelError.ChannelId, ChannelDisabledCloseReason)
+		}
 		lang := getRootUserLang()
 		subject := i18n.Translate(lang, i18n.MsgNotifyChannelDisabledSubject, map[string]any{
 			"Name": channelError.ChannelName,
