@@ -154,6 +154,8 @@ export interface TopupInfo {
   enable_redemption?: boolean
   /** Whether compliance confirmation has been completed */
   payment_compliance_confirmed?: boolean
+  /** Percentage of each paid top-up by an invited user credited to the inviter */
+  affiliate_commission_rate?: number
   /** Current compliance terms version */
   payment_compliance_terms_version?: string
 }

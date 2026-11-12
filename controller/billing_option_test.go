@@ -83,6 +83,43 @@ export function parseTaskResult() { return {}; }
 	}
 }
 
+func TestUpdateOptionValidatesAffiliateCommissionRate(t *testing.T) {
+	paymentSetting := operation_setting.GetPaymentSetting()
+	previousConfirmed, previousTerms := paymentSetting.ComplianceConfirmed, paymentSetting.ComplianceTermsVersion
+	t.Cleanup(func() {
+		paymentSetting.ComplianceConfirmed, paymentSetting.ComplianceTermsVersion = previousConfirmed, previousTerms
+	})
+	paymentSetting.ComplianceTermsVersion = operation_setting.CurrentComplianceTermsVersion
+
+	tests := []struct {
+		name       string
+		value      any
+		compliance bool
+		errorText  string
+	}{
+		{name: "negative", value: -1, compliance: true, errorText: "between 0 and 100"},
+		{name: "above one hundred", value: 100.5, compliance: true, errorText: "between 0 and 100"},
+		{name: "not a number", value: "abc", compliance: true, errorText: "between 0 and 100"},
+		{name: "NaN", value: "NaN", compliance: true, errorText: "between 0 and 100"},
+		{name: "positive without compliance", value: 10, compliance: false, errorText: "confirm compliance terms"},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			paymentSetting.ComplianceConfirmed = testCase.compliance
+			body, err := common.Marshal(OptionUpdateRequest{Key: "AffiliateCommissionRate", Value: testCase.value})
+			require.NoError(t, err)
+			recorder := httptest.NewRecorder()
+			context, _ := gin.CreateTestContext(recorder)
+			context.Request = httptest.NewRequest(http.MethodPut, "/api/option/", strings.NewReader(string(body)))
+
+			UpdateOption(context)
+
+			assert.Contains(t, recorder.Body.String(), `"success":false`)
+			assert.Contains(t, recorder.Body.String(), testCase.errorText)
+		})
+	}
+}
+
 func TestUpdateOptionRejectsUsageExpressionWithoutTaskPlugin(t *testing.T) {
 	const modelName = "billing-save-model-without-plugin"
 	expressions, err := common.Marshal(map[string]string{

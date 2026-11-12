@@ -7,6 +7,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -117,6 +118,68 @@ func creditTopUpQuota(tx *gorm.DB, userId int, creditedQuota int, updates map[st
 	return ErrTopUpQuotaLimitExceeded
 }
 
+// affiliateCommission is the referral reward an inviter earns when a user they
+// invited completes a paid top-up. It is credited inside the top-up
+// transaction and logged after the transaction commits.
+type affiliateCommission struct {
+	inviterId int
+	quota     int
+}
+
+// creditPaidTopUp credits a completed paid top-up and, in the same
+// transaction, the inviter's referral commission: the credited quota times
+// common.AffiliateCommissionRate percent, rounded down. Redemption codes call
+// creditTopUpQuota directly and earn no commission. Callers complete each
+// order at most once under a row lock, so a commission is never paid twice.
+func creditPaidTopUp(tx *gorm.DB, userId int, creditedQuota int, updates map[string]any) (affiliateCommission, error) {
+	if err := creditTopUpQuota(tx, userId, creditedQuota, updates); err != nil {
+		return affiliateCommission{}, err
+	}
+	rate := common.AffiliateCommissionRate
+	if rate <= 0 || rate > 100 || !operation_setting.IsPaymentComplianceConfirmed() {
+		return affiliateCommission{}, nil
+	}
+
+	var invitee User
+	if err := tx.Select("inviter_id").Where("id = ?", userId).First(&invitee).Error; err != nil {
+		return affiliateCommission{}, err
+	}
+	if invitee.InviterId == 0 || invitee.InviterId == userId {
+		return affiliateCommission{}, nil
+	}
+
+	quota, err := common.WalletQuotaFromDecimalStrict(
+		decimal.NewFromInt(int64(creditedQuota)).Mul(decimal.NewFromFloat(rate)).Div(decimal.NewFromInt(100)).Floor(),
+	)
+	if err != nil || quota <= 0 {
+		return affiliateCommission{}, nil
+	}
+
+	// A deleted inviter, or one whose pending rewards would pass the wallet
+	// ceiling, matches no row and earns nothing; the top-up still succeeds.
+	result := tx.Model(&User{}).
+		Where("id = ? AND aff_quota <= ? AND aff_history <= ?", invitee.InviterId, common.MaxWalletQuota-quota, common.MaxWalletQuota-quota).
+		Updates(map[string]any{
+			"aff_quota":   gorm.Expr("aff_quota + ?", quota),
+			"aff_history": gorm.Expr("aff_history + ?", quota),
+		})
+	if result.Error != nil {
+		return affiliateCommission{}, result.Error
+	}
+	if result.RowsAffected == 0 {
+		common.SysLog(common.LogText("affiliate commission skipped inviter_id=%d invitee_id=%d quota=%d", invitee.InviterId, userId, quota))
+		return affiliateCommission{}, nil
+	}
+	return affiliateCommission{inviterId: invitee.InviterId, quota: quota}, nil
+}
+
+func (commission affiliateCommission) record() {
+	if commission.quota <= 0 {
+		return
+	}
+	RecordLog(commission.inviterId, LogTypeSystem, common.NewMessage("Referral commission {{quota}} from a top-up by an invited user", map[string]any{"quota": logger.FormatQuota(commission.quota)}))
+}
+
 func (topUp *TopUp) Update() error {
 	var err error
 	err = DB.Save(topUp).Error
@@ -185,6 +248,7 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 	}
 
 	var quotaToAdd int
+	var commission affiliateCommission
 	topUp := &TopUp{}
 	err = DB.Transaction(func(tx *gorm.DB) error {
 		if err := lockForUpdate(tx).Where(refCol+" = ?", tradeNo).First(topUp).Error; err != nil {
@@ -215,7 +279,9 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 		if err := tx.Save(topUp).Error; err != nil {
 			return err
 		}
-		return creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil)
+		var creditErr error
+		commission, creditErr = creditPaidTopUp(tx, topUp.UserId, quotaToAdd, nil)
+		return creditErr
 	})
 	if err != nil {
 		if !errors.Is(err, ErrTopUpNotFound) && !errors.Is(err, ErrPaymentMethodMismatch) && !errors.Is(err, ErrTopUpStatusInvalid) {
@@ -227,6 +293,7 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 		return true, nil
 	}
 	syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, common.LogText("epay topup"))
+	commission.record()
 
 	common.SysLog(common.LogText("Epay top-up succeeded trade_no=%s user_id=%d quota_to_add=%d money=%.2f", topUp.TradeNo, topUp.UserId, quotaToAdd, topUp.Money))
 	RecordTopupLog(topUp.UserId, common.NewMessage("Online top-up succeeded, amount added: {{quota}}, payment amount: {{amount}}", map[string]any{"quota": logger.FormatQuota(quotaToAdd), "amount": fmt.Sprintf("%f", topUp.Money)}), callerIp, topUp.PaymentMethod, PaymentProviderEpay)
@@ -239,6 +306,7 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 	}
 
 	var quota int
+	var commission affiliateCommission
 	topUp := &TopUp{}
 
 	refCol := "`trade_no`"
@@ -273,9 +341,10 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 		if err != nil || quota <= 0 {
 			return ErrInvalidTopUpQuota
 		}
-		return creditTopUpQuota(tx, topUp.UserId, quota, map[string]any{
+		commission, err = creditPaidTopUp(tx, topUp.UserId, quota, map[string]any{
 			"stripe_customer": customerId,
 		})
+		return err
 	})
 
 	if err != nil {
@@ -283,6 +352,7 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 		return errors.New("top-up failed")
 	}
 	syncCreditUserQuotaCache(topUp.UserId, quota, common.LogText("stripe topup"))
+	commission.record()
 
 	RecordTopupLog(topUp.UserId, common.NewMessage("Online top-up succeeded, amount added: {{quota}}, payment amount: {{amount}}", map[string]any{"quota": logger.FormatQuota(quota), "amount": topUp.Amount}), callerIp, topUp.PaymentMethod, PaymentMethodStripe)
 
@@ -459,6 +529,7 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 
 	var userId int
 	var quotaToAdd int
+	var commission affiliateCommission
 	var payMoney float64
 	var paymentMethod string
 
@@ -503,8 +574,10 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 		}
 
 		// 增加用户额度（立即写库，保持一致性）
-		if err := creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil); err != nil {
-			return err
+		var creditErr error
+		commission, creditErr = creditPaidTopUp(tx, topUp.UserId, quotaToAdd, nil)
+		if creditErr != nil {
+			return creditErr
 		}
 
 		userId = topUp.UserId
@@ -519,6 +592,7 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 
 	// 事务外记录日志，避免阻塞
 	syncCreditUserQuotaCache(userId, quotaToAdd, common.LogText("manual topup"))
+	commission.record()
 	RecordTopupLog(userId, common.NewMessage("Administrator completed the order, amount added: {{quota}}, payment amount: {{amount}}", map[string]any{"quota": logger.FormatQuota(quotaToAdd), "amount": fmt.Sprintf("%f", payMoney)}), callerIp, paymentMethod, "admin")
 	return nil
 }
@@ -528,6 +602,7 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 	}
 
 	var quota int
+	var commission affiliateCommission
 	topUp := &TopUp{}
 
 	refCol := "`trade_no`"
@@ -580,7 +655,8 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 			}
 		}
 
-		return creditTopUpQuota(tx, topUp.UserId, quota, updateFields)
+		commission, err = creditPaidTopUp(tx, topUp.UserId, quota, updateFields)
+		return err
 	})
 
 	if err != nil {
@@ -588,6 +664,7 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 		return errors.New("top-up failed")
 	}
 	syncCreditUserQuotaCache(topUp.UserId, quota, common.LogText("creem topup"))
+	commission.record()
 
 	RecordTopupLog(topUp.UserId, common.NewMessage("{{provider}} top-up succeeded, amount added: {{quota}}, payment amount: {{amount}}", map[string]any{"provider": "Creem", "quota": quota, "amount": fmt.Sprintf("%.2f", topUp.Money)}), callerIp, topUp.PaymentMethod, PaymentMethodCreem)
 
@@ -600,6 +677,7 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 	}
 
 	var quotaToAdd int
+	var commission affiliateCommission
 	topUp := &TopUp{}
 
 	refCol := "`trade_no`"
@@ -638,7 +716,8 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 			return err
 		}
 
-		return creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil)
+		commission, err = creditPaidTopUp(tx, topUp.UserId, quotaToAdd, nil)
+		return err
 	})
 
 	if err != nil {
@@ -646,6 +725,7 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 		return errors.New("top-up failed")
 	}
 	syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, common.LogText("waffo topup"))
+	commission.record()
 
 	if quotaToAdd > 0 {
 		RecordTopupLog(topUp.UserId, common.NewMessage("{{provider}} top-up succeeded, amount added: {{quota}}, payment amount: {{amount}}", map[string]any{"provider": "Waffo", "quota": logger.FormatQuota(quotaToAdd), "amount": fmt.Sprintf("%.2f", topUp.Money)}), callerIp, topUp.PaymentMethod, PaymentMethodWaffo)
@@ -660,6 +740,7 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 	}
 
 	var quotaToAdd int
+	var commission affiliateCommission
 	topUp := &TopUp{}
 
 	refCol := "`trade_no`"
@@ -698,7 +779,8 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 			return err
 		}
 
-		return creditTopUpQuota(tx, topUp.UserId, quotaToAdd, nil)
+		commission, err = creditPaidTopUp(tx, topUp.UserId, quotaToAdd, nil)
+		return err
 	})
 
 	if err != nil {
@@ -706,6 +788,7 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 		return errors.New("top-up failed")
 	}
 	syncCreditUserQuotaCache(topUp.UserId, quotaToAdd, common.LogText("waffo pancake topup"))
+	commission.record()
 
 	if quotaToAdd > 0 {
 		RecordLog(topUp.UserId, LogTypeTopup, common.NewMessage("{{provider}} top-up succeeded, amount added: {{quota}}, payment amount: {{amount}}", map[string]any{"provider": "Waffo Pancake", "quota": logger.FormatQuota(quotaToAdd), "amount": fmt.Sprintf("%.2f", topUp.Money)}))
