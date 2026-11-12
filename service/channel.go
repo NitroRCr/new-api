@@ -19,7 +19,7 @@ func formatNotifyType(channelId int, status int) string {
 func shouldCloseActiveWebSocketsAfterDisable(channelId int) bool {
 	channel, err := model.GetChannelById(channelId, true)
 	if err != nil {
-		common.SysLog(fmt.Sprintf("failed to check channel status before closing active websockets: channel_id=%d, error=%v", channelId, err))
+		common.SysLog(common.LogText("failed to check channel status before closing active websockets: channel_id=%d, error=%v", channelId, err))
 		return true
 	}
 	return channel.Status != common.ChannelStatusEnabled
@@ -27,11 +27,11 @@ func shouldCloseActiveWebSocketsAfterDisable(channelId int) bool {
 
 // disable & notify
 func DisableChannel(channelError types.ChannelError, reason string) {
-	common.SysLog(fmt.Sprintf("通道「%s」（#%d）发生错误，准备禁用，原因：%s", channelError.ChannelName, channelError.ChannelId, common.LocalLogPreview(reason)))
+	common.SysLog(common.LogText("channel %q (#%d) failed, disabling it, reason: %s", channelError.ChannelName, channelError.ChannelId, common.LocalLogPreview(reason)))
 
 	// 检查是否启用自动禁用功能
 	if !channelError.AutoBan {
-		common.SysLog(fmt.Sprintf("通道「%s」（#%d）未启用自动禁用功能，跳过禁用操作", channelError.ChannelName, channelError.ChannelId))
+		common.SysLog(common.LogText("channel %q (#%d) has automatic disabling turned off, skipping", channelError.ChannelName, channelError.ChannelId))
 		return
 	}
 
@@ -40,42 +40,21 @@ func DisableChannel(channelError types.ChannelError, reason string) {
 		if shouldCloseActiveWebSocketsAfterDisable(channelError.ChannelId) {
 			CloseActiveWebSocketsForChannel(channelError.ChannelId, ChannelDisabledCloseReason)
 		}
-		lang := getRootUserLang()
-		subject := i18n.Translate(lang, i18n.MsgNotifyChannelDisabledSubject, map[string]any{
-			"Name": channelError.ChannelName,
-			"Id":   channelError.ChannelId,
+		params := map[string]any{"Name": channelError.ChannelName, "Id": channelError.ChannelId, "Reason": reason}
+		NotifyChannelWatchers(formatNotifyType(channelError.ChannelId, common.ChannelStatusAutoDisabled), func(lang string) (string, string) {
+			return i18n.Translate(lang, i18n.MsgChannelNotifyDisabledSubject, params), i18n.Translate(lang, i18n.MsgChannelNotifyDisabledContent, params)
 		})
-		content := i18n.Translate(lang, i18n.MsgNotifyChannelDisabledContent, map[string]any{
-			"Name":   channelError.ChannelName,
-			"Id":     channelError.ChannelId,
-			"Reason": reason,
-		})
-		NotifyRootUser(formatNotifyType(channelError.ChannelId, common.ChannelStatusAutoDisabled), subject, content)
 	}
 }
 
 func EnableChannel(channelId int, usingKey string, channelName string) {
 	success := model.UpdateChannelStatus(channelId, usingKey, common.ChannelStatusEnabled, "")
 	if success {
-		lang := getRootUserLang()
-		subject := i18n.Translate(lang, i18n.MsgNotifyChannelEnabledSubject, map[string]any{
-			"Name": channelName,
-			"Id":   channelId,
+		params := map[string]any{"Name": channelName, "Id": channelId}
+		NotifyChannelWatchers(formatNotifyType(channelId, common.ChannelStatusEnabled), func(lang string) (string, string) {
+			return i18n.Translate(lang, i18n.MsgChannelNotifyEnabledSubject, params), i18n.Translate(lang, i18n.MsgChannelNotifyEnabledContent, params)
 		})
-		NotifyRootUser(formatNotifyType(channelId, common.ChannelStatusEnabled), subject, subject)
 	}
-}
-
-// getRootUserLang returns the root user's language preference
-func getRootUserLang() string {
-	user := model.GetRootUser()
-	if user != nil {
-		setting := user.GetSetting()
-		if setting.Language != "" {
-			return setting.Language
-		}
-	}
-	return i18n.DefaultLang
 }
 
 func ShouldDisableChannel(err *types.NewAPIError) bool {
